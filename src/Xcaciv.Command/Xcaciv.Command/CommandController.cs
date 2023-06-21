@@ -49,7 +49,7 @@ public class CommandController : ICommandController
     /// Command Manager test constructor
     /// </summary>
     /// <param name="packageBinearyDirectories"></param>
-    public CommandController(IVerfiedSourceDirectories packageBinearyDirectories)
+    public CommandController(IVerfiedSourceDirectories packageBinearyDirectories) : this()
     {
         this.PackageBinaryDirectories = packageBinearyDirectories;
     }
@@ -66,12 +66,11 @@ public class CommandController : ICommandController
     /// <summary>
     /// (re)populate command collection using a crawler
     /// </summary>
-    /// <param name="crawler"></param>
     /// <param name="subDirectory"></param>
     /// <exception cref="Exceptions.InValidConfigurationException"></exception>
     public void LoadCommands(string subDirectory = "bin")
     {
-        if (this.PackageBinaryDirectories.Directories.Count == 0) throw new Exceptions.InValidConfigurationException("No base package directory configured.");
+        if (this.PackageBinaryDirectories.Directories.Count == 0) throw new Exceptions.NoPluginsFoundException("No base package directory configured.");
 
         this.Commands.Clear();
         foreach (var directory in this.PackageBinaryDirectories.Directories)
@@ -97,12 +96,12 @@ public class CommandController : ICommandController
     /// </summary>
     /// <param name="commandKey"></param>
     /// <param name="args"></param>
-    /// <param name="output"></param>
-    private async Task Run(string commandKey, string[] args, ITextIoContext output)
+    /// <param name="ioContext"></param>
+    private async Task Run(string commandKey, string[] args, ITextIoContext ioContext)
     {
         if (!this.Commands.ContainsKey(commandKey))
         {
-            await output.SetStatusMessage($"Command [{commandKey}] not found.");
+            await ioContext.SetStatusMessage($"Command [{commandKey}] not found.");
             return;
         }
         try
@@ -111,12 +110,12 @@ public class CommandController : ICommandController
             using (var context = AssemblyContext.LoadFromPath(commandDiscription.PackageDescription.FullPath))
             {
                 var commandInstance = context.GetInstance<ICommand>(commandDiscription.FullTypeName);
-                await commandInstance.Main(args, output);
+                await commandInstance.Main(args, ioContext);
             }
         }
         catch (Exception ex)
         {
-            await output.SetStatusMessage(ex.ToString());
+            await ioContext.SetStatusMessage(ex.ToString());
         }
     }
     /// <summary>

@@ -86,8 +86,12 @@ public class Crawler : ICrawler
     public void CrawlPackagePaths(string basePath, string subDirectory, Action<string, string> packageAction)
     {
         basePath = fileSystem.Path.GetFullPath(basePath);
+        if (!this.fileSystem.Directory.Exists(basePath)) throw new DirectoryNotFoundException(basePath);
+
         var binaryDirectories = fileSystem.Directory.GetDirectories(basePath, fileSystem.Path.Combine("*", subDirectory),
                 SearchOption.AllDirectories);
+
+        if (!binaryDirectories.Any()) throw new Exceptions.NoPackageDirectoryFoundException($"No packages found in {basePath}.");
 
         // avoid overhead of paralell if it is not needed
         if (binaryDirectories.Count() > ParallelizeAt)

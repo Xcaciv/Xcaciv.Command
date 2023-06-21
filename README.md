@@ -5,5 +5,5 @@ Sexy and modular command framework capable of executing a line of text as a comm
 ```csharp
     var commandManager = new Xc.Command.Manager();
     manager.LoadCommands(new Crawler());
-    _ = manager.Run("Say Hello to my little friend", output);
+    _ = manager.Run("Say Hello to my little friend");
 ```
