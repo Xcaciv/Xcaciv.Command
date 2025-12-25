@@ -5,6 +5,13 @@ All notable changes to Xcaciv.Command will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2025-12-25
+
+### Changed
+- Bump all package versions to 2.1.0 across projects.
+- Update README to reference Xcaciv.Loader 2.1.0 and current features.
+- Align documentation with current security policies and .NET 8.
+
 ## [2.0.0] - 2025-12-19 - Comprehensive v2.0 Maintenance Release
 
 ### Overview

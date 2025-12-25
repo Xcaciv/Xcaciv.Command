@@ -17,25 +17,25 @@ Commands are .NET class libraries that contain implementations of the `Xc.Comman
 
 - **Async Pipeline Support**: Commands can be chained with `|` for threaded pipeline execution
 - **Plugin System**: Dynamic command loading from external assemblies
-- **Secure Plugin Loading**: Built on Xcaciv.Loader 2.0.1 with instance-based security policies
+- **Secure Plugin Loading**: Built on Xcaciv.Loader 2.1.0 with instance-based security policies
 - **Auto-Generated Help**: Comprehensive help generation from command attributes
 - **Sub-Commands**: Hierarchical command structure support
 - **Built-in Commands**: `SAY`, `SET`, `ENV`, and `REGIF` included
 
 ## Dependencies
 
-- **Xcaciv.Loader 2.0.1**: Assembly loading with instance-based security configuration
+- **Xcaciv.Loader 2.1.0**: Assembly loading with instance-based security configuration
 - **System.IO.Abstractions 21.0.2**: File system abstraction for testability
 
 ## Security
 
-This framework uses Xcaciv.Loader 2.0.1's instance-based security policies:
+This framework uses Xcaciv.Loader 2.1.0's instance-based security policies:
 - **Default Security Policy**: Each plugin is restricted to its own directory
 - **No Wildcard Access**: Replaces v1.x wildcard (`*`) restrictions with proper path-based security
 - **Security Exception Handling**: Graceful handling of security violations with detailed logging
 - **Per-Instance Configuration**: Each AssemblyContext has independent security settings
 
-For detailed security model, plugin development guidelines, and vulnerability reporting procedures, see [SECURITY.md](SECURITY.md).
+For detailed security model, plugin development guidelines, and vulnerability reporting procedures, see `SECURITY.md`.
 
 ### Audit Logging
 
@@ -60,7 +60,7 @@ Logs include:
 - Environment variable changes with old/new values
 - Timestamps in UTC for consistency
 
-See [SECURITY.md](SECURITY.md#audit-logging) for secure audit logging patterns.
+See `SECURITY.md` for secure audit logging patterns.
 
 ## Roadmap
 
@@ -68,17 +68,14 @@ See [SECURITY.md](SECURITY.md#audit-logging) for secure audit logging patterns.
 - [X] Internal commands `SAY` `SET`, `ENV` and `REGIF`
 - [X] Sub-command structure
 - [X] Auto generated help
-- [X] Migrate to Xcaciv.Loader 2.0.1 with instance-based security
-- [ ] Stabilize at 1.6
+- [X] Migrate to Xcaciv.Loader 2.1.0 with instance-based security
 
 ## Version History
 
-### 1.5.18 (Current)
-- **Breaking Change**: Migrated to Xcaciv.Loader 2.0.1
-- Implemented instance-based security policies for plugin loading
-- Replaced wildcard path restrictions with directory-based security
-- Added comprehensive security exception handling
-- Fixed null reference warnings in .NET 8
+### 2.1.0 (Current)
+- Bumped all package versions to 2.1.0
+- Documentation aligned to Xcaciv.Loader 2.1.0
+- Maintains .NET 8 targeting and security policies
 
 ## License
 
