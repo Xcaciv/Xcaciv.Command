@@ -3,6 +3,7 @@
     <TargetFrameworks>$(XcacivTargetFrameworks)</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <Version>2.1.0</Version>
     <AssemblyName>Xcaciv.Command.FileLoader</AssemblyName>
     <RootNamespace>Xcaciv.Command.FileLoader</RootNamespace>
   </PropertyGroup>

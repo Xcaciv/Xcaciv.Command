@@ -5,7 +5,8 @@ param(
     [string]$VersionSuffix,
     [string]$NuGetSource = 'https://api.nuget.org/v3/index.json',
     [string]$NuGetApiKey,
-    [switch]$UseNet10
+    [switch]$UseNet10,
+    [string]$LocalNuGetDirectory = 'G:\NuGetPackages'
 )
 
 Set-StrictMode -Version Latest
@@ -100,6 +101,16 @@ try {
 
     $packageFiles = Get-ChildItem -Path $artifactDirectory -Filter '*.nupkg' | Where-Object { $_.Name -notlike '*.snupkg' }
     $symbolPackageFiles = Get-ChildItem -Path $artifactDirectory -Filter '*.snupkg' -ErrorAction SilentlyContinue
+
+    if (-not (Test-Path -Path $LocalNuGetDirectory)) {
+        New-Item -ItemType Directory -Path $LocalNuGetDirectory -Force | Out-Null
+    }
+
+    $packagesToCopy = @($packageFiles + $symbolPackageFiles) | Where-Object { $_ }
+    foreach ($package in $packagesToCopy) {
+        Copy-Item -Path $package.FullName -Destination $LocalNuGetDirectory -Force
+    }
+    Write-Host "Copied packages to $LocalNuGetDirectory." -ForegroundColor Green
 
     if ($NuGetApiKey) {
         foreach ($packageFile in $packageFiles) {
