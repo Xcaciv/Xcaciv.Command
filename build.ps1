@@ -1,16 +1,101 @@
+#Requires -Version 5.1
+
+<#
+.SYNOPSIS
+    Build script for Xcaciv.Command solution
+
+.DESCRIPTION
+    Builds, tests, packs, and optionally publishes NuGet packages for Xcaciv.Command.
+    
+.PARAMETER Configuration
+    Build configuration (Debug or Release). Default: Release
+
+.PARAMETER VersionSuffix
+    Version suffix for pre-release packages (e.g., "beta.1")
+
+.PARAMETER NuGetSource
+    NuGet source URL for publishing. Default: https://api.nuget.org/v3/index.json
+
+.PARAMETER NuGetApiKey
+    API key for NuGet publishing. If not provided, packages won't be pushed.
+
+.PARAMETER UseNet10
+    Use .NET 10 target framework in addition to .NET 8
+
+.PARAMETER LocalNuGetDirectory
+    Local directory to copy packages to. Default: G:\NuGetPackages
+
+.PARAMETER SkipTests
+    Skip running tests
+
+.EXAMPLE
+    .\build.ps1
+    
+.EXAMPLE
+    .\build.ps1 -Configuration Release -NuGetApiKey $env:NUGET_API_KEY
+    
+.EXAMPLE
+    .\build.ps1 -Configuration Debug -SkipTests
+    
+.EXAMPLE
+    .\build.ps1 -UseNet10
+#>
+
 [CmdletBinding()]
 param(
     [ValidateSet('Debug', 'Release')]
     [string]$Configuration = 'Release',
+    
     [string]$VersionSuffix,
+    
     [string]$NuGetSource = 'https://api.nuget.org/v3/index.json',
+    
     [string]$NuGetApiKey,
+    
     [switch]$UseNet10,
-    [string]$LocalNuGetDirectory = 'G:\NuGetPackages'
+    
+    [string]$LocalNuGetDirectory = 'G:\NuGetPackages',
+    
+    [switch]$SkipTests
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+$ProgressPreference = 'SilentlyContinue'
+
+#region Helper Functions
+
+function Write-BuildStep {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Message
+    )
+    
+    Write-Host "`n========================================" -ForegroundColor Cyan
+    Write-Host $Message -ForegroundColor Cyan
+    Write-Host "========================================`n" -ForegroundColor Cyan
+}
+
+function Write-Success {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Message
+    )
+    
+    Write-Host "? $Message" -ForegroundColor Green
+}
+
+function Write-ErrorMessage {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Message
+    )
+    
+    Write-Host "? $Message" -ForegroundColor Red
+}
 
 function Invoke-DotNet {
     [CmdletBinding()]
@@ -19,6 +104,7 @@ function Invoke-DotNet {
         [string[]]$Arguments
     )
 
+    # Sanitize arguments for display (hide API keys)
     $sanitizedArguments = @()
     for ($argumentIndex = 0; $argumentIndex -lt $Arguments.Length; $argumentIndex++) {
         $currentArgument = $Arguments[$argumentIndex]
@@ -37,93 +123,307 @@ function Invoke-DotNet {
         $sanitizedArguments += $currentArgument
     }
 
-    Write-Host "dotnet $($sanitizedArguments -join ' ')" -ForegroundColor Cyan
-    dotnet @Arguments
+    Write-Host "dotnet $($sanitizedArguments -join ' ')" -ForegroundColor DarkGray
+    
+    & dotnet @Arguments
+    
     if ($LASTEXITCODE -ne 0) {
-        throw "dotnet $($sanitizedArguments -join ' ') failed with exit code $LASTEXITCODE."
+        Write-ErrorMessage "dotnet $($sanitizedArguments -join ' ') failed with exit code $LASTEXITCODE"
+        throw "Build failed"
     }
 }
 
-# Use the script directory as the repository root to avoid accidentally moving up a level
-$repositoryRoot = $PSScriptRoot
-Push-Location $repositoryRoot
+function Test-DotNetInstalled {
+    try {
+        $dotnetVersion = & dotnet --version 2>&1
+        Write-Host ".NET SDK version: $dotnetVersion" -ForegroundColor Gray
+        
+        # Check if .NET 10 is required but not installed
+        if ($UseNet10.IsPresent) {
+            $sdkList = & dotnet --list-sdks 2>&1
+            $hasNet10 = $sdkList | Where-Object { $_ -match '^10\.' }
+            
+            if (-not $hasNet10) {
+                Write-Host "`n? WARNING: .NET 10 SDK not detected" -ForegroundColor Yellow
+                Write-Host "The -UseNet10 flag requires .NET 10 SDK to be installed." -ForegroundColor Yellow
+                Write-Host "Available SDKs:" -ForegroundColor Yellow
+                $sdkList | ForEach-Object { Write-Host "  $_" -ForegroundColor Gray }
+                Write-Host "`nDownload .NET 10 SDK from: https://dotnet.microsoft.com/download/dotnet/10.0" -ForegroundColor Yellow
+                Write-Host "Or remove the -UseNet10 flag to build for .NET 8 only.`n" -ForegroundColor Yellow
+                return $false
+            }
+        }
+        
+        return $true
+    }
+    catch {
+        Write-ErrorMessage ".NET SDK is not installed or not in PATH"
+        Write-Host "Download from: https://dotnet.microsoft.com/download" -ForegroundColor Yellow
+        return $false
+    }
+}
+
+#endregion
+
+#region Main Script
+
 try {
+    Write-BuildStep "Xcaciv.Command Build Script"
+    
+    # Force Debug configuration when UseNet10 is enabled
+    # Release mode uses PackageReferences which don't exist for net10.0 yet
+    if ($UseNet10.IsPresent -and $Configuration -eq 'Release') {
+        Write-Host "? WARNING: UseNet10 requires Debug configuration (Release uses PackageReferences)" -ForegroundColor Yellow
+        Write-Host "Automatically switching to Debug configuration..." -ForegroundColor Yellow
+        $Configuration = 'Debug'
+    }
+    
+    Write-Host "Configuration: $Configuration" -ForegroundColor Gray
+    
+    if ($UseNet10) {
+        Write-Host "Multi-targeting: .NET 8 + .NET 10" -ForegroundColor Gray
+        if (-not $SkipTests) {
+            Write-Host "? Auto-enabling SkipTests: Test projects don't support multi-targeting" -ForegroundColor Yellow
+            $SkipTests = $true
+        }
+    }
+    else {
+        Write-Host "Target Framework: .NET 8" -ForegroundColor Gray
+    }
+    
+    Write-Host "Skip Tests: $SkipTests" -ForegroundColor Gray
+    
+    # Verify .NET SDK is installed
+    if (-not (Test-DotNetInstalled)) {
+        exit 1
+    }
+
+    # Use the script directory as the repository root
+    $repositoryRoot = $PSScriptRoot
+    Write-Host "Repository root: $repositoryRoot" -ForegroundColor Gray
+    
+    Push-Location $repositoryRoot
+    
+    # Define paths
     $solutionPath = Join-Path $repositoryRoot 'Xcaciv.Command.sln'
     $packageProjectPath = Join-Path $repositoryRoot 'src\Xcaciv.Command\Xcaciv.Command.csproj'
     $artifactDirectory = Join-Path $repositoryRoot 'artifacts\packages'
 
+    # Create artifacts directory if it doesn't exist
     if (-not (Test-Path -Path $artifactDirectory)) {
         New-Item -ItemType Directory -Path $artifactDirectory -Force | Out-Null
+        Write-Host "Created artifacts directory: $artifactDirectory" -ForegroundColor Gray
     }
 
+    # Build MSBuild properties - MUST use /p: syntax for properties to work correctly
     $msbuildProperties = @()
     if ($UseNet10.IsPresent) {
-        $msbuildProperties += '-p:UseNet10=true'
+        $msbuildProperties += '/p:UseNet10=true'
+        Write-Host "Note: Building with multi-targeting enabled (net8.0;net10.0)" -ForegroundColor Yellow
     }
 
     # Discover solution if default path does not exist
     if (-not (Test-Path -Path $solutionPath)) {
-        $solutions = Get-ChildItem -Path $repositoryRoot -Filter '*.sln' -Recurse -ErrorAction SilentlyContinue
-        if ($solutions -and $solutions.Count -gt 0) {
-            $solutionPath = $solutions[0].FullName
+        Write-Host "Default solution path not found, searching..." -ForegroundColor Yellow
+        $solutions = Get-ChildItem -Path $repositoryRoot -Filter '*.sln' -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($solutions) {
+            $solutionPath = $solutions.FullName
             Write-Host "Discovered solution: $solutionPath" -ForegroundColor Yellow
+        }
+        else {
+            Write-Host "No solution file found, will build project directly" -ForegroundColor Yellow
+            $solutionPath = $null
         }
     }
 
-    if (Test-Path -Path $solutionPath) {
-        $restoreArguments = @('restore', $solutionPath)
-        $restoreArguments += $msbuildProperties
-        Invoke-DotNet -Arguments $restoreArguments
-
-        $buildArguments = @('build', $solutionPath, '--configuration', $Configuration, '--nologo')
-        $buildArguments += $msbuildProperties
-        Invoke-DotNet -Arguments $buildArguments
-    }
-    else {
-        # Fallback to restoring and building the primary package project
-        Write-Host "Solution not found. Falling back to building project: $packageProjectPath" -ForegroundColor Yellow
+    # Step 1: Restore
+    Write-BuildStep "Step 1: Restoring Dependencies"
+    
+    if ($UseNet10.IsPresent) {
+        # When UseNet10 is enabled, restore the package project specifically
+        # This ensures project references are available for both net8.0 and net10.0
+        Write-Host "Restoring package project with multi-targeting..." -ForegroundColor Yellow
         $restoreArguments = @('restore', $packageProjectPath)
         $restoreArguments += $msbuildProperties
         Invoke-DotNet -Arguments $restoreArguments
+        Write-Success "Restore completed for package project"
+    }
+    elseif ($solutionPath -and (Test-Path -Path $solutionPath)) {
+        $restoreArguments = @('restore', $solutionPath)
+        $restoreArguments += $msbuildProperties
+        Invoke-DotNet -Arguments $restoreArguments
+        Write-Success "Restore completed for solution"
+    }
+    elseif (Test-Path -Path $packageProjectPath) {
+        $restoreArguments = @('restore', $packageProjectPath)
+        $restoreArguments += $msbuildProperties
+        Invoke-DotNet -Arguments $restoreArguments
+        Write-Success "Restore completed for project"
+    }
+    else {
+        Write-ErrorMessage "Neither solution nor package project found"
+        throw "Build failed: No buildable target found"
+    }
 
-        $buildArguments = @('build', $packageProjectPath, '--configuration', $Configuration, '--nologo')
+    # Step 2: Build
+    Write-BuildStep "Step 2: Building Solution"
+    
+    # When UseNet10 is enabled, only build the package project to avoid test project issues
+    if ($UseNet10.IsPresent) {
+        Write-Host "Building package project only (test projects excluded)" -ForegroundColor Yellow
+        $buildArguments = @('build', $packageProjectPath, '--configuration', $Configuration, '--no-restore', '--nologo')
         $buildArguments += $msbuildProperties
         Invoke-DotNet -Arguments $buildArguments
+        Write-Success "Build completed for package project"
+    }
+    elseif ($solutionPath -and (Test-Path -Path $solutionPath)) {
+        $buildArguments = @('build', $solutionPath, '--configuration', $Configuration, '--no-restore', '--nologo')
+        $buildArguments += $msbuildProperties
+        Invoke-DotNet -Arguments $buildArguments
+        Write-Success "Build completed for solution"
+    }
+    else {
+        $buildArguments = @('build', $packageProjectPath, '--configuration', $Configuration, '--no-restore', '--nologo')
+        $buildArguments += $msbuildProperties
+        Invoke-DotNet -Arguments $buildArguments
+        Write-Success "Build completed for project"
     }
 
+    # Step 3: Test (optional)
+    if (-not $SkipTests -and $solutionPath -and (Test-Path -Path $solutionPath)) {
+        Write-BuildStep "Step 3: Running Tests"
+        
+        if ($UseNet10.IsPresent) {
+            Write-Host "Note: Tests will run on all target frameworks (net8.0 and net10.0)" -ForegroundColor Yellow
+        }
+        
+        $testArguments = @('test', $solutionPath, '--configuration', $Configuration, '--no-build', '--nologo', '--verbosity', 'normal')
+        $testArguments += $msbuildProperties
+        
+        try {
+            Invoke-DotNet -Arguments $testArguments
+            Write-Success "All tests passed"
+        }
+        catch {
+            Write-ErrorMessage "Tests failed"
+            throw
+        }
+    }
+    elseif ($SkipTests) {
+        Write-Host "Skipping tests (SkipTests flag set)" -ForegroundColor Yellow
+    }
+
+    # Step 4: Pack
+    Write-BuildStep "Step 4: Creating NuGet Packages"
+    
+    if ($UseNet10.IsPresent) {
+        Write-Host "Note: Package will contain assemblies for both net8.0 and net10.0" -ForegroundColor Yellow
+    }
+    
+    # Note: Not using --no-build because of project reference structure in Xcaciv.Command
     $packArguments = @('pack', $packageProjectPath, '--configuration', $Configuration, '--output', $artifactDirectory, '--nologo')
+    
     if ($VersionSuffix) {
-        $packArguments += "-p:VersionSuffix=$VersionSuffix"
+        $packArguments += "--version-suffix", $VersionSuffix
+        Write-Host "Version suffix: $VersionSuffix" -ForegroundColor Gray
     }
+    
     $packArguments += $msbuildProperties
-
     Invoke-DotNet -Arguments $packArguments
+    Write-Success "Packages created"
 
-    $packageFiles = Get-ChildItem -Path $artifactDirectory -Filter '*.nupkg' | Where-Object { $_.Name -notlike '*.snupkg' }
+    # Step 5: Copy to local directory
+    Write-BuildStep "Step 5: Copying Packages to Local Directory"
+    
+    $packageFiles = Get-ChildItem -Path $artifactDirectory -Filter '*.nupkg' | Where-Object { $_.Name -notlike '*.symbols.nupkg' }
     $symbolPackageFiles = Get-ChildItem -Path $artifactDirectory -Filter '*.snupkg' -ErrorAction SilentlyContinue
 
     if (-not (Test-Path -Path $LocalNuGetDirectory)) {
         New-Item -ItemType Directory -Path $LocalNuGetDirectory -Force | Out-Null
+        Write-Host "Created local NuGet directory: $LocalNuGetDirectory" -ForegroundColor Gray
     }
 
     $packagesToCopy = @($packageFiles + $symbolPackageFiles) | Where-Object { $_ }
-    foreach ($package in $packagesToCopy) {
-        Copy-Item -Path $package.FullName -Destination $LocalNuGetDirectory -Force
-    }
-    Write-Host "Copied packages to $LocalNuGetDirectory." -ForegroundColor Green
-
-    if ($NuGetApiKey) {
-        foreach ($packageFile in $packageFiles) {
-            Invoke-DotNet -Arguments @('nuget', 'push', $packageFile.FullName, '--source', $NuGetSource, '--api-key', $NuGetApiKey, '--skip-duplicate')
-        }
-        foreach ($symbolPackageFile in $symbolPackageFiles) {
-            Invoke-DotNet -Arguments @('nuget', 'push', $symbolPackageFile.FullName, '--source', $NuGetSource, '--api-key', $NuGetApiKey, '--skip-duplicate')
-        }
+    
+    if ($packagesToCopy.Count -eq 0) {
+        Write-ErrorMessage "No packages found to copy"
     }
     else {
-        Write-Host "Packages saved to $artifactDirectory (skipping push because no API key was provided)." -ForegroundColor Green
+        foreach ($package in $packagesToCopy) {
+            Copy-Item -Path $package.FullName -Destination $LocalNuGetDirectory -Force
+            Write-Host "  Copied: $($package.Name)" -ForegroundColor Gray
+        }
+        Write-Success "Copied $($packagesToCopy.Count) package(s) to $LocalNuGetDirectory"
     }
+
+    # Step 6: Push to NuGet (optional)
+    if ($NuGetApiKey) {
+        Write-BuildStep "Step 6: Publishing to NuGet"
+        
+        $pushCount = 0
+        
+        foreach ($packageFile in $packageFiles) {
+            try {
+                Invoke-DotNet -Arguments @('nuget', 'push', $packageFile.FullName, '--source', $NuGetSource, '--api-key', $NuGetApiKey, '--skip-duplicate')
+                Write-Host "  Pushed: $($packageFile.Name)" -ForegroundColor Gray
+                $pushCount++
+            }
+            catch {
+                Write-Host "  Warning: Failed to push $($packageFile.Name)" -ForegroundColor Yellow
+            }
+        }
+        
+        foreach ($symbolPackageFile in $symbolPackageFiles) {
+            try {
+                Invoke-DotNet -Arguments @('nuget', 'push', $symbolPackageFile.FullName, '--source', $NuGetSource, '--api-key', $NuGetApiKey, '--skip-duplicate')
+                Write-Host "  Pushed: $($symbolPackageFile.Name)" -ForegroundColor Gray
+                $pushCount++
+            }
+            catch {
+                Write-Host "  Warning: Failed to push $($symbolPackageFile.Name)" -ForegroundColor Yellow
+            }
+        }
+        
+        Write-Success "Published $pushCount package(s) to NuGet"
+    }
+    else {
+        Write-Host "`nSkipping NuGet publish (no API key provided)" -ForegroundColor Yellow
+        Write-Host "Packages are available at: $artifactDirectory" -ForegroundColor Gray
+    }
+
+    # Build summary
+    Write-BuildStep "Build Summary"
+    Write-Host "Configuration: $Configuration" -ForegroundColor Gray
+    
+    if ($UseNet10.IsPresent) {
+        Write-Host "Target Frameworks: net8.0, net10.0" -ForegroundColor Gray
+    }
+    else {
+        Write-Host "Target Framework: net8.0" -ForegroundColor Gray
+    }
+    
+    Write-Host "Artifacts: $artifactDirectory" -ForegroundColor Gray
+    Write-Host "Local copy: $LocalNuGetDirectory" -ForegroundColor Gray
+    
+    if ($packageFiles) {
+        Write-Host "`nPackages created:" -ForegroundColor Gray
+        foreach ($pkg in $packageFiles) {
+            Write-Host "  - $($pkg.Name)" -ForegroundColor Gray
+        }
+    }
+    
+    Write-Success "`nBuild completed successfully!"
+    
+    exit 0
+}
+catch {
+    Write-Host "`n" -NoNewline
+    Write-ErrorMessage "Build failed: $($_.Exception.Message)"
+    Write-Host $_.ScriptStackTrace -ForegroundColor Red
+    exit 1
 }
 finally {
     Pop-Location
 }
+
+#endregion
