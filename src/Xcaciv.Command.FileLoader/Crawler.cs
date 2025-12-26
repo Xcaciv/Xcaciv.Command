@@ -25,7 +25,8 @@ public class Crawler : ICrawler
     protected IFileSystem fileSystem;
     
     /// <summary>
-    /// Assembly loading security configuration
+    /// Assembly loading security policy (Xcaciv.Loader 2.1.1 instance-based configuration).
+    /// Default: AssemblySecurityPolicy.Strict (requires explicit allowlist and enforces base path restrictions)
     /// </summary>
     private AssemblySecurityPolicy _securityPolicy = AssemblySecurityPolicy.Strict;
     
@@ -46,12 +47,16 @@ public class Crawler : ICrawler
 
     /// <summary>
     /// Set the security policy for plugin assembly loading.
-    /// Default: AssemblySecurityPolicy.Strict (requires explicit allowlist)
+    /// Leverages Xcaciv.Loader 2.1.1 instance-based security configuration.
+    /// Default: AssemblySecurityPolicy.Strict (path restrictions enforced, explicit allowlists required)
     /// </summary>
+    /// <param name="policy">Security policy: Strict (recommended) or Default (legacy)</param>
     public void SetSecurityPolicy(AssemblySecurityPolicy policy)
     {
         _securityPolicy = policy;
+        Trace.WriteLine($"[Xcaciv.Loader 2.1.1] Crawler security policy set to: {policy}");
     }
+    
     /// <summary>
     /// interigate packages for commands and return descriptions
     /// </summary>
@@ -75,16 +80,19 @@ public class Crawler : ICrawler
 
             try
             {
-                // Use configured security policy for plugin discovery
-                // Base path restriction is set to the directory containing the plugin DLL
+                // Xcaciv.Loader 2.1.1: Instance-based security with per-plugin path restrictions
+                // Each plugin is sandboxed to its own directory, preventing directory traversal attacks
+                var basePathRestriction = Path.GetDirectoryName(binPath) ?? Directory.GetCurrentDirectory();
+                
                 using (var context = new AssemblyContext(
                     binPath,
-                    basePathRestriction: Path.GetDirectoryName(binPath) ?? Directory.GetCurrentDirectory(),
+                    basePathRestriction: basePathRestriction,
                     securityPolicy: _securityPolicy))
                 {
                     var commands = new Dictionary<string, ICommandDescription>();
                     packagDesc.Version = context.GetVersion();
 
+                    // Xcaciv.Loader 2.1.1: GetTypes with security policy enforcement
                     foreach (var commandType in context.GetTypes<ICommandDelegate>())
                     {
                         if (commandType == null) continue; // not sure why it could be null, but the compiler says so
@@ -107,7 +115,7 @@ public class Crawler : ICrawler
                         }
                         catch (Exception ex)
                         {
-                            Trace.WriteLine($"Error processing command type: {ex.Message}");
+                            Trace.WriteLine($"[Xcaciv.Loader 2.1.1] Error processing command type [{commandType.FullName}] in package [{key}]: {ex.Message}");
                         }
                     }
 
@@ -116,13 +124,31 @@ public class Crawler : ICrawler
             }
             catch (SecurityException ex)
             {
-                Trace.WriteLine($"Security violation loading package [{key}] from [{binPath}]: " +
-                    $"SecurityPolicy={_securityPolicy}. Details: {ex.Message}");
+                // Xcaciv.Loader 2.1.1: Enhanced security exception handling
+                Trace.WriteLine($"[Xcaciv.Loader 2.1.1] Security violation loading package [{key}] from [{binPath}]: " +
+                    $"SecurityPolicy={_securityPolicy}, " +
+                    $"BasePathRestriction={Path.GetDirectoryName(binPath)}. " +
+                    $"Details: {ex.Message}");
                 return; // Skip this package due to security violation
+            }
+            catch (FileNotFoundException ex)
+            {
+                Trace.WriteLine($"[Xcaciv.Loader 2.1.1] Assembly not found for package [{key}] at [{binPath}]: {ex.Message}");
+                return;
+            }
+            catch (FileLoadException ex)
+            {
+                Trace.WriteLine($"[Xcaciv.Loader 2.1.1] Failed to load assembly for package [{key}] from [{binPath}]: {ex.Message}");
+                return;
+            }
+            catch (BadImageFormatException ex)
+            {
+                Trace.WriteLine($"[Xcaciv.Loader 2.1.1] Invalid assembly format for package [{key}] at [{binPath}]: {ex.Message}");
+                return;
             }
             catch (Exception ex)
             {
-                Trace.WriteLine($"Error loading package [{key}] from [{binPath}]: {ex.GetType().Name}: {ex.Message}");
+                Trace.WriteLine($"[Xcaciv.Loader 2.1.1] Unexpected error loading package [{key}] from [{binPath}]: {ex.GetType().Name}: {ex.Message}");
                 return; // Skip this package due to error
             }
 

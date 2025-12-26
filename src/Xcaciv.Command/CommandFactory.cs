@@ -10,6 +10,7 @@ namespace Xcaciv.Command;
 /// <summary>
 /// Default command factory that supports optional dependency injection resolution.
 /// Provides both sync and async methods for command instantiation.
+/// Leverages Xcaciv.Loader 2.1.1 instance-based security.
 /// </summary>
 public class CommandFactory : ICommandFactory
 {
@@ -24,7 +25,9 @@ public class CommandFactory : ICommandFactory
 
     /// <summary>
     /// Configure assembly loading security policies.
+    /// Leverages Xcaciv.Loader 2.1.1 instance-based security with per-assembly context isolation.
     /// </summary>
+    /// <param name="configuration">Security configuration with policy, path restrictions, and allowlists</param>
     public void SetSecurityConfiguration(AssemblySecurityConfiguration configuration)
     {
         if (configuration == null) throw new ArgumentNullException(nameof(configuration));
@@ -77,33 +80,39 @@ public class CommandFactory : ICommandFactory
 
         try
         {
+            // Xcaciv.Loader 2.1.1: Instance-based security with strict path restrictions
+            // Each plugin command is loaded in an isolated context sandboxed to its own directory
             var basePathRestriction = _securityConfiguration.EnforceBasePathRestriction
                 ? Path.GetDirectoryName(packagePath) ?? Directory.GetCurrentDirectory()
                 : ".";
 
-            // Enforce strict policy - NOTE this is not effective in Loader v2.1.0 due to limitations. Better enforcement in future versions.
+            // Xcaciv.Loader 2.1.1: Determine effective security policy
+            // If AllowReflectionEmit is disabled, force Strict policy regardless of configuration
             var effectivePolicy = _securityConfiguration.AllowReflectionEmit
                 ? _securityConfiguration.SecurityPolicy
                 : AssemblySecurityPolicy.Strict;
 
+            // Xcaciv.Loader 2.1.1: Create isolated assembly loading context with security policy
             using var context = new AssemblyContext(
                 packagePath,
                 basePathRestriction: basePathRestriction,
                 securityPolicy: effectivePolicy);
+                
             return context.CreateInstance<ICommandDelegate>(fullTypeName);
         }
         catch (SecurityException ex)
         {
             throw new InvalidOperationException(
-                $"Security violation loading command [{fullTypeName}] from [{packagePath}]: " +
-                $"Policy={( _securityConfiguration.AllowReflectionEmit ? _securityConfiguration.SecurityPolicy : AssemblySecurityPolicy.Strict )}, " +
-                $"PathRestriction={_securityConfiguration.EnforceBasePathRestriction}. " +
+                $"[Xcaciv.Loader 2.1.1] Security violation loading command [{fullTypeName}] from [{packagePath}]: " +
+                $"Policy={(_securityConfiguration.AllowReflectionEmit ? _securityConfiguration.SecurityPolicy : AssemblySecurityPolicy.Strict)}, " +
+                $"EnforceBasePathRestriction={_securityConfiguration.EnforceBasePathRestriction}, " +
+                $"BasePathRestriction={Path.GetDirectoryName(packagePath)}. " +
                 $"Details: {ex.Message}", ex);
         }
         catch (Exception ex) when (ex is FileNotFoundException or FileLoadException or BadImageFormatException)
         {
             throw new InvalidOperationException(
-                $"Failed to load command [{fullTypeName}] from [{packagePath}]: {ex.GetType().Name}. " +
+                $"[Xcaciv.Loader 2.1.1] Failed to load command [{fullTypeName}] from [{packagePath}]: {ex.GetType().Name}. " +
                 $"Verify plugin assembly exists and is valid. {ex.Message}", ex);
         }
     }

@@ -24,13 +24,21 @@
     <PackageReference Include="System.IO.Abstractions" />
     <PackageReference Include="Xcaciv.Loader" />
   </ItemGroup>
-  
-  <ItemGroup>
-    <!-- Project references included for compilation; packaging handled by CopyProjectReferencesToPackage target -->
-    <ProjectReference Include="..\Xcaciv.Command.FileLoader\Xcaciv.Command.FileLoader.csproj" />
-    <ProjectReference Include="..\Xcaciv.Command.Interface\Xcaciv.Command.Interface.csproj" />
-    <ProjectReference Include="..\Xcaciv.Command.Core\Xcaciv.Command.Core.csproj" />
-  </ItemGroup>
+
+	<ItemGroup Condition="'$(Configuration)' == 'Debug'">
+		<!-- Project references included for compilation; packaging handled by CopyProjectReferencesToPackage target -->
+		<ProjectReference Include="..\Xcaciv.Command.FileLoader\Xcaciv.Command.FileLoader.csproj" PrivateAssets="all" />
+		<ProjectReference Include="..\Xcaciv.Command.Interface\Xcaciv.Command.Interface.csproj" PrivateAssets="all" />
+		<ProjectReference Include="..\Xcaciv.Command.Core\Xcaciv.Command.Core.csproj" PrivateAssets="all" />
+	</ItemGroup>
+	<ItemGroup Condition="'$(Configuration)' != 'Debug'">
+		<PackageReference Include="Xcaciv.Command.Interface" />
+		<PackageReference Include="Xcaciv.Command.Core" />
+	</ItemGroup>
+	<ItemGroup Condition="'$(Configuration)' != 'Debug'">
+		<!-- Project references included for compilation; packaging handled by CopyProjectReferencesToPackage target -->
+		<ProjectReference Include="..\Xcaciv.Command.FileLoader\Xcaciv.Command.FileLoader.csproj" PrivateAssets="all" />
+	</ItemGroup>
   
   <ItemGroup>
     <None Include="readme.md" Pack="True" PackagePath="readme.md" />
@@ -46,7 +54,7 @@
 
   <Target DependsOnTargets="ResolveReferences" Name="CopyProjectReferencesToPackage">
     <ItemGroup>
-      <BuildOutputInPackage Include="@(ReferenceCopyLocalPaths->WithMetadataValue('ReferenceSourceTarget', 'ProjectReference'))" />
+      <BuildOutputInPackage Include="@(ReferenceCopyLocalPaths-&gt;WithMetadataValue('ReferenceSourceTarget', 'ProjectReference'))" />
     </ItemGroup>
   </Target>
 </Project>

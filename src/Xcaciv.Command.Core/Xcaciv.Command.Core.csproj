@@ -28,4 +28,8 @@
 	  <None Include="readme.md" Pack="True" PackagePath="readme.md" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <PackageReference Include="Xcaciv.Command.Interface" />
+	</ItemGroup>
+
 </Project>
