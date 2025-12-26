@@ -2,6 +2,7 @@
   <PropertyGroup>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <Version>2.1.1</Version>
     <TargetFrameworks>$(XcacivTargetFrameworks)</TargetFrameworks>
     <AssemblyName>Xcaciv.Command.DependencyInjection</AssemblyName>
     <RootNamespace>Xcaciv.Command.DependencyInjection</RootNamespace>

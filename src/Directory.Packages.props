@@ -11,8 +11,8 @@
     <PackageVersion Include="Microsoft.Extensions.Options" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="8.0.0" />
     <PackageVersion Include="System.CommandLine" Version="2.0.0" />
-    <PackageVersion Include="Xcaciv.Command.Interface" Version="2.1.0" />
-    <PackageVersion Include="Xcaciv.Command.Core" Version="2.1.0" />
+    <PackageVersion Include="Xcaciv.Command.Interface" Version="2.1.1" />
+    <PackageVersion Include="Xcaciv.Command.Core" Version="2.1.1" />
   </ItemGroup>
   <!-- Unit Test Versions -->
   <ItemGroup>
