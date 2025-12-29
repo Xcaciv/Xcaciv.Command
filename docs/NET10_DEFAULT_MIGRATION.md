@@ -118,7 +118,7 @@ Test projects now target net10.0 by default:
 
 ### For Consumers
 - **None** - Packages with net10.0 are compatible with .NET 10+ applications
-- Applications targeting .NET 8 can still use packages with net10.0 target (forward compatible)
+- Applications targeting .NET 10 (or later) can consume packages that target net8.0 (backward compatibility), but applications targeting .NET 8 cannot consume packages that only target net10.0
 
 ### For Contributors
 - ?? **.NET 10 SDK now required** to build the solution
