@@ -34,7 +34,7 @@ namespace Xcaciv.Command.Tests
         public void LoadCommands_WithDefaultSecurityPolicy_LoadsSuccessfully()
         {
             // Arrange
-            var controller = new CommandController(new Crawler(), @"..\..\..\..\..\");
+            var controller = new CommandController(new Crawler(), @"..\..\..\..\..");
             controller.AddPackageDirectory(commandPackageDir);
 
             // Act
@@ -49,7 +49,7 @@ namespace Xcaciv.Command.Tests
         public async Task ExecuteCommand_WithInstanceBasedSecurity_ExecutesSuccessfully()
         {
             // Arrange
-            var controller = new CommandController(new Crawler(), @"..\..\..\..\..\");
+            var controller = new CommandController(new Crawler(), @"..\..\..\..\..");
             controller.AddPackageDirectory(commandPackageDir);
             controller.LoadCommands(string.Empty);
             var env = new EnvironmentContext();
@@ -101,7 +101,7 @@ namespace Xcaciv.Command.Tests
         public async Task CommandExecution_WithPluginLoading_UsesSecureContext()
         {
             // Arrange
-            var controller = new CommandController(new Crawler(), @"..\..\..\..\..\");
+            var controller = new CommandController(new Crawler(), @"..\..\..\..\..");
             controller.AddPackageDirectory(commandPackageDir);
             controller.LoadCommands(string.Empty);
             var env = new EnvironmentContext();
@@ -121,7 +121,7 @@ namespace Xcaciv.Command.Tests
         public async Task SubCommand_WithSecureLoading_ExecutesCorrectly()
         {
             // Arrange
-            var controller = new CommandController(new Crawler(), @"..\..\..\..\..\");
+            var controller = new CommandController(new Crawler(), @"..\..\..\..\..");
             controller.AddPackageDirectory(commandPackageDir);
             controller.LoadCommands(string.Empty);
             var env = new EnvironmentContext();
@@ -137,10 +137,10 @@ namespace Xcaciv.Command.Tests
         }
 
         [Fact]
-        public void MultiplePackageDirectories_WithSecureLoading_AllLoadSuccessfully()
+        public async Task MultiplePackageDirectories_WithSecureLoading_AllLoadSuccessfully()
         {
             // Arrange
-            var controller = new CommandController(new Crawler(), @"..\..\..\..\..\");
+            var controller = new CommandController(new Crawler(), @"..\..\..\..\..");
             controller.AddPackageDirectory(commandPackageDir);
             
             // Act
@@ -150,7 +150,7 @@ namespace Xcaciv.Command.Tests
             // Assert - Both plugin and default commands should be loaded
             var env = new EnvironmentContext();
             var textio = new TestTextIo();
-            controller.GetHelp(string.Empty, textio, env);
+            await controller.GetHelpAsync(string.Empty, textio, env);
             var output = textio.ToString();
 
             Assert.Contains("ECHO", output); // Plugin command
@@ -161,7 +161,7 @@ namespace Xcaciv.Command.Tests
         public async Task PipelineExecution_WithSecureLoading_WorksCorrectly()
         {
             // Arrange
-            var controller = new CommandController(new Crawler(), @"..\..\..\..\..\");
+            var controller = new CommandController(new Crawler(), @"..\..\..\..\..");
             controller.AddPackageDirectory(commandPackageDir);
             controller.LoadCommands(string.Empty);
             var env = new EnvironmentContext();

@@ -92,7 +92,7 @@ namespace Xcaciv.Command.Tests
         }
 
         [Fact()]
-        public void LoadInternalSubCommandsTest()
+        public async Task LoadInternalSubCommandsTest()
         {
             var controller = new CommandController(new Crawler(), @"..\..\..\..\..\") as Interface.ICommandController;
             controller.AddCommand("internal", new InstallCommand());
@@ -100,7 +100,7 @@ namespace Xcaciv.Command.Tests
 
             var env = new EnvironmentContext();
             var textio = new TestImpementations.TestTextIo();
-            controller.GetHelp(string.Empty, textio, env);
+            await controller.GetHelpAsync(string.Empty, textio, env);
 
             var output = textio.ToString();
 
@@ -110,14 +110,14 @@ namespace Xcaciv.Command.Tests
 
 #pragma warning disable CS8602 // Dereference of a possibly null reference.
         [Fact()]
-        public void LoadDefaultCommandsTest()
+        public async Task LoadDefaultCommandsTest()
         {
             var controller = new CommandController(new Crawler(), @"..\..\..\..\..\") as Interface.ICommandController;
             controller.RegisterBuiltInCommands();
 
             var textio = new TestImpementations.TestTextIo();
             var env = new EnvironmentContext();
-            controller.GetHelp(string.Empty, textio, env);
+            await controller.GetHelpAsync(string.Empty, textio, env);
 
             var output = textio.ToString();
 
@@ -125,7 +125,7 @@ namespace Xcaciv.Command.Tests
             Assert.Contains("REGIF", output);
         }
         [Fact()]
-        public void AllHelpTestAsync()
+        public async Task AllHelpTestAsync()
         {
             var controller = new CommandControllerTestHarness(new Crawler(), @"..\..\..\..\..\") as Interface.ICommandController;
             controller.RegisterBuiltInCommands();
@@ -135,7 +135,7 @@ namespace Xcaciv.Command.Tests
 
             var textio = new TestImpementations.TestTextIo();
             var env = new EnvironmentContext();
-            controller.GetHelp(string.Empty, textio, env);
+            await controller.GetHelpAsync(string.Empty, textio, env);
             var output = textio.ToString();
 
             Assert.Contains("SUB DO echo", output);
