@@ -3,7 +3,7 @@
     <TargetFrameworks>$(XcacivTargetFrameworks)</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <Version>2.1.2</Version>
+    <Version>2.1.3</Version>
     <IsPublishable>True</IsPublishable>
     <AssemblyName>Xcaciv.Command.Interface</AssemblyName>
     <RootNamespace>Xcaciv.Command.Interface</RootNamespace>
