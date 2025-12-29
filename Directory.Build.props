@@ -1,8 +1,9 @@
 <Project>
   <PropertyGroup>
-    <UseNet10 Condition="'$(UseNet10)' == ''">false</UseNet10>
-    <XcacivBaseTargetFramework>net8.0</XcacivBaseTargetFramework>
+    <!-- Default to .NET 10, with optional .NET 8 support via UseNet08 flag -->
+    <UseNet08 Condition="'$(UseNet08)' == ''">false</UseNet08>
+    <XcacivBaseTargetFramework>net10.0</XcacivBaseTargetFramework>
     <XcacivTargetFrameworks>$(XcacivBaseTargetFramework)</XcacivTargetFrameworks>
-    <XcacivTargetFrameworks Condition="'$(UseNet10)' == 'true'">$(XcacivBaseTargetFramework);net10.0</XcacivTargetFrameworks>
+    <XcacivTargetFrameworks Condition="'$(UseNet08)' == 'true'">net8.0;$(XcacivBaseTargetFramework)</XcacivTargetFrameworks>
   </PropertyGroup>
 </Project>

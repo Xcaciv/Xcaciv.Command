@@ -19,8 +19,8 @@
 .PARAMETER NuGetApiKey
     API key for NuGet publishing. If not provided, packages won't be pushed.
 
-.PARAMETER UseNet10
-    Use .NET 10 target framework in addition to .NET 8
+.PARAMETER UseNet08
+    Include .NET 8 target framework in addition to .NET 10 (multi-targeting)
 
 .PARAMETER LocalNuGetDirectory
     Local directory to copy packages to. Default: G:\NuGetPackages
@@ -38,13 +38,13 @@
     .\build.ps1 -Configuration Debug -SkipTests
     
 .EXAMPLE
-    .\build.ps1 -UseNet10
+    .\build.ps1 -UseNet08
 #>
 
 [CmdletBinding()]
 param(
     [ValidateSet('Debug', 'Release')]
-    [string]$Configuration = 'Release',
+    [string]$Configuration = 'Debug',  # Changed from 'Release' to 'Debug' for .NET 10 default
     
     [string]$VersionSuffix,
     
@@ -52,7 +52,7 @@ param(
     
     [string]$NuGetApiKey,
     
-    [switch]$UseNet10,
+    [switch]$UseNet08,
     
     [string]$LocalNuGetDirectory = 'G:\NuGetPackages',
     
@@ -138,18 +138,30 @@ function Test-DotNetInstalled {
         $dotnetVersion = & dotnet --version 2>&1
         Write-Host ".NET SDK version: $dotnetVersion" -ForegroundColor Gray
         
-        # Check if .NET 10 is required but not installed
-        if ($UseNet10.IsPresent) {
-            $sdkList = & dotnet --list-sdks 2>&1
-            $hasNet10 = $sdkList | Where-Object { $_ -match '^10\.' }
+        # Check if .NET 10 SDK is installed (now required by default)
+        $sdkList = & dotnet --list-sdks 2>&1
+        $hasNet10 = $sdkList | Where-Object { $_ -match '^10\.' }
+        
+        if (-not $hasNet10) {
+            Write-Host "`n? WARNING: .NET 10 SDK not detected" -ForegroundColor Yellow
+            Write-Host ".NET 10 SDK is required (projects now default to .NET 10)." -ForegroundColor Yellow
+            Write-Host "Available SDKs:" -ForegroundColor Yellow
+            $sdkList | ForEach-Object { Write-Host "  $_" -ForegroundColor Gray }
+            Write-Host "`nDownload .NET 10 SDK from: https://dotnet.microsoft.com/download/dotnet/10.0" -ForegroundColor Yellow
+            return $false
+        }
+        
+        # Check if .NET 8 is required but not installed (when UseNet08 is specified)
+        if ($UseNet08.IsPresent) {
+            $hasNet08 = $sdkList | Where-Object { $_ -match '^8\.' }
             
-            if (-not $hasNet10) {
-                Write-Host "`n? WARNING: .NET 10 SDK not detected" -ForegroundColor Yellow
-                Write-Host "The -UseNet10 flag requires .NET 10 SDK to be installed." -ForegroundColor Yellow
+            if (-not $hasNet08) {
+                Write-Host "`n? WARNING: .NET 8 SDK not detected" -ForegroundColor Yellow
+                Write-Host "The -UseNet08 flag requires .NET 8 SDK to be installed." -ForegroundColor Yellow
                 Write-Host "Available SDKs:" -ForegroundColor Yellow
                 $sdkList | ForEach-Object { Write-Host "  $_" -ForegroundColor Gray }
-                Write-Host "`nDownload .NET 10 SDK from: https://dotnet.microsoft.com/download/dotnet/10.0" -ForegroundColor Yellow
-                Write-Host "Or remove the -UseNet10 flag to build for .NET 8 only.`n" -ForegroundColor Yellow
+                Write-Host "`nDownload .NET 8 SDK from: https://dotnet.microsoft.com/download/dotnet/8.0" -ForegroundColor Yellow
+                Write-Host "Or remove the -UseNet08 flag to build for .NET 10 only.`n" -ForegroundColor Yellow
                 return $false
             }
         }
@@ -170,17 +182,17 @@ function Test-DotNetInstalled {
 try {
     Write-BuildStep "Xcaciv.Command Build Script"
     
-    # Force Debug configuration when UseNet10 is enabled
-    # Release mode uses PackageReferences which don't exist for net10.0 yet
-    if ($UseNet10.IsPresent -and $Configuration -eq 'Release') {
-        Write-Host "? WARNING: UseNet10 requires Debug configuration (Release uses PackageReferences)" -ForegroundColor Yellow
+    # Force Debug configuration when UseNet08 is enabled
+    # Release mode uses PackageReferences which may not exist for multi-targeting yet
+    if ($UseNet08.IsPresent -and $Configuration -eq 'Release') {
+        Write-Host "? WARNING: UseNet08 requires Debug configuration (Release uses PackageReferences)" -ForegroundColor Yellow
         Write-Host "Automatically switching to Debug configuration..." -ForegroundColor Yellow
         $Configuration = 'Debug'
     }
     
     Write-Host "Configuration: $Configuration" -ForegroundColor Gray
     
-    if ($UseNet10) {
+    if ($UseNet08) {
         Write-Host "Multi-targeting: .NET 8 + .NET 10" -ForegroundColor Gray
         if (-not $SkipTests) {
             Write-Host "? Auto-enabling SkipTests: Test projects don't support multi-targeting" -ForegroundColor Yellow
@@ -188,7 +200,7 @@ try {
         }
     }
     else {
-        Write-Host "Target Framework: .NET 8" -ForegroundColor Gray
+        Write-Host "Target Framework: .NET 10" -ForegroundColor Gray
     }
     
     Write-Host "Skip Tests: $SkipTests" -ForegroundColor Gray
@@ -217,8 +229,8 @@ try {
 
     # Build MSBuild properties - MUST use /p: syntax for properties to work correctly
     $msbuildProperties = @()
-    if ($UseNet10.IsPresent) {
-        $msbuildProperties += '/p:UseNet10=true'
+    if ($UseNet08.IsPresent) {
+        $msbuildProperties += '/p:UseNet08=true'
         Write-Host "Note: Building with multi-targeting enabled (net8.0;net10.0)" -ForegroundColor Yellow
     }
 
@@ -239,8 +251,8 @@ try {
     # Step 1: Restore
     Write-BuildStep "Step 1: Restoring Dependencies"
     
-    if ($UseNet10.IsPresent) {
-        # When UseNet10 is enabled, restore the package project specifically
+    if ($UseNet08.IsPresent) {
+        # When UseNet08 is enabled, restore the package project specifically
         # This ensures project references are available for both net8.0 and net10.0
         Write-Host "Restoring package project with multi-targeting..." -ForegroundColor Yellow
         $restoreArguments = @('restore', $packageProjectPath)
@@ -268,8 +280,8 @@ try {
     # Step 2: Build
     Write-BuildStep "Step 2: Building Solution"
     
-    # When UseNet10 is enabled, only build the package project to avoid test project issues
-    if ($UseNet10.IsPresent) {
+    # When UseNet08 is enabled, only build the package project to avoid test project issues
+    if ($UseNet08.IsPresent) {
         Write-Host "Building package project only (test projects excluded)" -ForegroundColor Yellow
         $buildArguments = @('build', $packageProjectPath, '--configuration', $Configuration, '--no-restore', '--nologo')
         $buildArguments += $msbuildProperties
@@ -293,7 +305,7 @@ try {
     if (-not $SkipTests -and $solutionPath -and (Test-Path -Path $solutionPath)) {
         Write-BuildStep "Step 3: Running Tests"
         
-        if ($UseNet10.IsPresent) {
+        if ($UseNet08.IsPresent) {
             Write-Host "Note: Tests will run on all target frameworks (net8.0 and net10.0)" -ForegroundColor Yellow
         }
         
@@ -316,7 +328,7 @@ try {
     # Step 4: Pack
     Write-BuildStep "Step 4: Creating NuGet Packages"
     
-    if ($UseNet10.IsPresent) {
+    if ($UseNet08.IsPresent) {
         Write-Host "Note: Package will contain assemblies for both net8.0 and net10.0" -ForegroundColor Yellow
     }
     
@@ -395,11 +407,11 @@ try {
     Write-BuildStep "Build Summary"
     Write-Host "Configuration: $Configuration" -ForegroundColor Gray
     
-    if ($UseNet10.IsPresent) {
+    if ($UseNet08.IsPresent) {
         Write-Host "Target Frameworks: net8.0, net10.0" -ForegroundColor Gray
     }
     else {
-        Write-Host "Target Framework: net8.0" -ForegroundColor Gray
+        Write-Host "Target Framework: net10.0" -ForegroundColor Gray
     }
     
     Write-Host "Artifacts: $artifactDirectory" -ForegroundColor Gray
