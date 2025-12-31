@@ -17,9 +17,9 @@ namespace zTestCommandPackage
     {
         public override string HandleExecution(Dictionary<string, IParameterValue> parameters, IEnvironmentContext env)
         {
-            if (parameters.ContainsKey("text"))
+            if (parameters.TryGetValue("text", out var textParam))
             {
-                return parameters["text"].RawValue;
+                return textParam.RawValue;
             }
             return String.Join(' ', parameters.Values.Select(p => p.RawValue));
         }

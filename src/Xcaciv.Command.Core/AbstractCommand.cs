@@ -176,7 +176,10 @@ namespace Xcaciv.Command.Core
             else
             {
                 var parameterArray = io.Parameters ?? Array.Empty<string>();
-                var isHelp = _helpService?.IsHelpRequest(parameterArray) ?? IsHelpRequest(parameterArray);
+                var isHelp = _helpService?.IsHelpRequest(parameterArray) ?? 
+                    parameterArray.Any(p => p.Equals("--HELP", StringComparison.OrdinalIgnoreCase) ||
+                                           p.Equals("-?", StringComparison.OrdinalIgnoreCase) ||
+                                           p.Equals("/?", StringComparison.OrdinalIgnoreCase));
                 if (isHelp)
                 {
                     yield return CommandResult<string>.Success(Help(parameterArray, environment));
@@ -259,23 +262,6 @@ namespace Xcaciv.Command.Core
                 flags = flags.Where(x => !x.UsePipe).ToArray();
             }
             return flags;
-        }
-
-        /// <summary>
-        /// [Obsolete] Legacy help request detector. Use IHelpService.IsHelpRequest() instead.
-        /// Kept for backward compatibility with commands that override this method.
-        /// </summary>
-        [Obsolete("Use IHelpService.IsHelpRequest() instead. This method will be removed in v3.0.")]
-        protected static bool IsHelpRequest(string[] parameters)
-        {
-            if (parameters == null || parameters.Length == 0)
-            {
-                return false;
-            }
-
-            return parameters.Any(p => p.Equals("--HELP", StringComparison.OrdinalIgnoreCase) ||
-                                      p.Equals("-?", StringComparison.OrdinalIgnoreCase) ||
-                                      p.Equals("/?", StringComparison.OrdinalIgnoreCase));
         }
 
         public abstract string HandlePipedChunk(string pipedChunk, Dictionary<string, IParameterValue> parameters, IEnvironmentContext env);

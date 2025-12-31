@@ -15,9 +15,9 @@ Write-Host "`nRunning tests..." -ForegroundColor Cyan
 $testResult = dotnet test Xcaciv.Command.sln -c Debug --no-build --logger "console;verbosity=minimal" 
 
 if ($LASTEXITCODE -eq 0) {
-    Write-Host "`n? ALL TESTS PASSED" -ForegroundColor Green
+    Write-Host "`n[PASS] ALL TESTS PASSED" -ForegroundColor Green
     exit 0
 } else {
-    Write-Host "`n? TESTS FAILED" -ForegroundColor Red
+    Write-Host "`n[FAIL] TESTS FAILED" -ForegroundColor Red
     exit 1
 }

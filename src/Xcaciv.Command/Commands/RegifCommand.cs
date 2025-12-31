@@ -32,12 +32,11 @@ namespace Xcaciv.Command.Commands
                 this.expression = new Regex(regexParam.RawValue);
                 
                 // Check if there's a string parameter
-                if (parameters.TryGetValue("string", out var stringParam) && stringParam.IsValid)
+                if (parameters.TryGetValue("string", out var stringParam) && 
+                    stringParam.IsValid && 
+                    this.expression.IsMatch(stringParam.RawValue))
                 {
-                    if (this.expression.IsMatch(stringParam.RawValue))
-                    {
-                        output.Append(stringParam.RawValue);
-                    }
+                    output.Append(stringParam.RawValue);
                 }
             }
             return output.ToString().Trim();

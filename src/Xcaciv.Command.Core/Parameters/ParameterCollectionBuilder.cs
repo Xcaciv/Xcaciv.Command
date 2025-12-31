@@ -36,21 +36,20 @@ public class ParameterCollectionBuilder
         var collection = new ParameterCollection();
         var errors = new List<string>();
 
-        foreach (var attr in attributes ?? Array.Empty<AbstractCommandParameter>())
+        foreach (var attr in (attributes ?? Array.Empty<AbstractCommandParameter>())
+            .Where(a => parametersDict.ContainsKey(a.Name)))
         {
-            if (parametersDict.TryGetValue(attr.Name, out var rawValue))
+            var rawValue = parametersDict[attr.Name];
+            var paramValue = new ParameterValue(attr.Name, rawValue, attr.DataType, _converter);
+            
+            // Validate before adding
+            if (!paramValue.IsValid)
             {
-                var paramValue = new ParameterValue(attr.Name, rawValue, attr.DataType, _converter);
-                
-                // Validate before adding
-                if (!paramValue.IsValid)
-                {
-                    errors.Add($"Parameter '{attr.Name}': {paramValue.ValidationError}");
-                    continue;
-                }
-
-                collection[attr.Name] = paramValue;
+                errors.Add($"Parameter '{attr.Name}': {paramValue.ValidationError}");
+                continue;
             }
+
+            collection[attr.Name] = paramValue;
         }
 
         // If there are any validation errors, throw a single exception with all details
@@ -78,21 +77,20 @@ public class ParameterCollectionBuilder
 
         var collection = new ParameterCollection();
 
-        foreach (var attr in attributes ?? Array.Empty<AbstractCommandParameter>())
+        foreach (var attr in (attributes ?? Array.Empty<AbstractCommandParameter>())
+            .Where(a => parametersDict.ContainsKey(a.Name)))
         {
-            if (parametersDict.TryGetValue(attr.Name, out var rawValue))
+            var rawValue = parametersDict[attr.Name];
+            var paramValue = new ParameterValue(attr.Name, rawValue, attr.DataType, _converter);
+            
+            // Fail fast on first validation error
+            if (!paramValue.IsValid)
             {
-                var paramValue = new ParameterValue(attr.Name, rawValue, attr.DataType, _converter);
-                
-                // Fail fast on first validation error
-                if (!paramValue.IsValid)
-                {
-                    throw new ArgumentException(
-                        $"Parameter '{attr.Name}' validation failed: {paramValue.ValidationError}");
-                }
-
-                collection[attr.Name] = paramValue;
+                throw new ArgumentException(
+                    $"Parameter '{attr.Name}' validation failed: {paramValue.ValidationError}");
             }
+
+            collection[attr.Name] = paramValue;
         }
 
         return collection;
