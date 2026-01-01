@@ -28,7 +28,7 @@ public class PipelineParser
             return Array.Empty<string>();
         }
 
-        // devide string on pipeline seperator
+        // divide string on pipeline separator
         // validate quoted strings
 
         var segments = new List<string>();

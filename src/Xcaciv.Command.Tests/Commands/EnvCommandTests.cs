@@ -125,7 +125,6 @@ namespace Xcaciv.Command.Tests.Commands
 
             // Act - Pipe input to ENV (ENV ignores piped input)
             await controller.Run("say line1 | env", textIo, env);
-            var output = textIo.GatherChildOutput();
 
             // Assert - ENV should output environment (but pipe behavior may vary)
             // Just verify no exception is thrown

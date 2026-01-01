@@ -278,7 +278,7 @@ namespace Xcaciv.Command.Core
         /// information and services. Cannot be null.</param>
         protected virtual void OnStartPipe(Dictionary<string, IParameterValue> processedParameters, IEnvironmentContext environment)
         {
-            // handle end for pipes
+            // handle start for pipes
         }
         /// <summary>
         /// Invoked when the pipe processing has completed, allowing for custom post-processing or cleanup.
@@ -292,7 +292,7 @@ namespace Xcaciv.Command.Core
         /// and services.</param>
         protected virtual void OnEndPipe(Dictionary<string, IParameterValue> processedParameters, IEnvironmentContext environment)
         {
-            // handle start for pipes
+            // handle end for pipes
         }
 
         public abstract string HandleExecution(Dictionary<string, IParameterValue> parameters, IEnvironmentContext env);
