@@ -24,7 +24,7 @@ public interface IPipelineExecutor
     Task ExecuteAsync(
         string commandLine,
         IIoContext ioContext,
-        IEnvironmentContext environmentContext,
+        IControllerEnvironmentContext environmentContext,
         Func<string, IIoContext, IEnvironmentContext, Task> executeCommand);
 
     /// <summary>
@@ -33,7 +33,7 @@ public interface IPipelineExecutor
     Task ExecuteAsync(
         string commandLine,
         IIoContext ioContext,
-        IEnvironmentContext environmentContext,
+        IControllerEnvironmentContext environmentContext,
         Func<string, IIoContext, IEnvironmentContext, CancellationToken, Task> executeCommand,
         CancellationToken cancellationToken);
 }

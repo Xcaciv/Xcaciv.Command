@@ -17,9 +17,9 @@ namespace Xcaciv.Command
         public ConcurrentBag<string> Output { get; private set; } = new ConcurrentBag<string>();
         public ConcurrentDictionary<string, string> PromptAnswers { get; private set; } = new ConcurrentDictionary<string, string>();
 
-        public override Task<IIoContext> GetChild(string[]? childArguments = null)
+        public override Task<IIoContext> GetChild()
         {
-            var child = new MemoryIoContext(this.Name + "Child", childArguments, Id);
+            var child = new MemoryIoContext(this.Name + "Child", Parameters, Id);
 
             Children.Add(child);
 

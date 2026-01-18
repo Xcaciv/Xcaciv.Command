@@ -217,18 +217,18 @@ public class CommandController : Interface.ICommandController
     /// <summary>
     /// parse a command line, find and execute the command passing in the arguments
     /// </summary>
-    public async Task Run(string commandLine, IIoContext ioContext, IEnvironmentContext env)
+    public async Task Run(string commandLine, IIoContext ioContext, IControllerEnvironmentContext env)
     {
         await Run(commandLine, ioContext, env, CancellationToken.None).ConfigureAwait(false);
     }
 
-    public async Task Run(string commandLine, IIoContext ioContext, IEnvironmentContext env, CancellationToken cancellationToken)
+    public async Task Run(string commandLine, IIoContext ioContext, IControllerEnvironmentContext env, CancellationToken cancellationToken)
     {
         if (commandLine == null) throw new ArgumentNullException(nameof(commandLine));
         if (ioContext == null) throw new ArgumentNullException(nameof(ioContext));
         if (env == null) throw new ArgumentNullException(nameof(env));
 
-        if (env is EnvironmentContext envContext)
+        if (env is ControllerEnvironmentContext envContext)
         {
             envContext.SetAuditLogger(_auditLogger);
         }
@@ -247,8 +247,8 @@ public class CommandController : Interface.ICommandController
             var args = CommandDescription.GetArgumentsFromCommandline(commandLine);
             await ioContext.SetParameters([.. args]).ConfigureAwait(false);
 
-            await using var childContext = await ioContext.GetChild(ioContext.Parameters).ConfigureAwait(false);
-            await ExecuteCommandInternal(commandName, childContext, env, cancellationToken).ConfigureAwait(false);
+            await using var childContext = await ioContext.GetChild().ConfigureAwait(false);
+            await _commandExecutor.ExecuteAsync(commandName, ioContext, env, cancellationToken).ConfigureAwait(false);
         }
     }
 
@@ -276,12 +276,12 @@ public class CommandController : Interface.ICommandController
         Task.Run(() => _commandExecutor.GetHelpAsync(command, context, env)).GetAwaiter().GetResult();
     }
 
-    private Task ExecuteCommandInternal(string commandKey, IIoContext ioContext, IEnvironmentContext env)
+    private Task ExecuteCommandInternax(string commandKey, IIoContext ioContext, IEnvironmentContext env)
     {
         return _commandExecutor.ExecuteAsync(commandKey, ioContext, env);
     }
 
-    private Task ExecuteCommandInternal(string commandKey, IIoContext ioContext, IEnvironmentContext env, CancellationToken cancellationToken)
+    private Task ExecuteCommandInternalx(string commandKey, IIoContext ioContext, IEnvironmentContext env, CancellationToken cancellationToken)
     {
         return _commandExecutor.ExecuteAsync(commandKey, ioContext, env, cancellationToken);
     }

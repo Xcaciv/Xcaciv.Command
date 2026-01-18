@@ -24,7 +24,7 @@
         /// <param name="commandLine"></param>
         /// <param name="output"></param>
         /// <returns></returns>
-        Task Run(string commandLine, IIoContext output, IEnvironmentContext env);
+        Task Run(string commandLine, IIoContext output, IControllerEnvironmentContext env);
         /// <summary>
         /// run a command using the loaded command packages with cancellation support
         /// </summary>
@@ -32,7 +32,7 @@
         /// <param name="output">IO context</param>
         /// <param name="env">Environment context</param>
         /// <param name="cancellationToken">Cancellation token to cancel execution</param>
-        Task Run(string commandLine, IIoContext output, IEnvironmentContext env, CancellationToken cancellationToken);
+        Task Run(string commandLine, IIoContext output, IControllerEnvironmentContext env, CancellationToken cancellationToken);
         
         /// <summary>
         /// Asynchronously get help information for a command.
