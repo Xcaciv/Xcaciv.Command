@@ -22,7 +22,7 @@ namespace Xcaciv.Command.Interface
     /// A command cannot modify the parent environment unless explicitly allowed
     /// via the ModifiesEnvironment flag on its CommandDescription.
     /// </remarks>
-    public interface IEnvironmentContext: ICommandContext<IEnvironmentContext>
+    public interface IControllerEnvironmentContext : ICommandContext<IEnvironmentContext>
     {
         /// <summary>
         /// Sets an environment variable to the specified value.
@@ -34,20 +34,7 @@ namespace Xcaciv.Command.Interface
         /// This operation marks the context as HasChanged = true.
         /// If an audit logger is configured, the change is logged.
         /// </remarks>
-        void SetValue(string key, string value);
-
-        /// <summary>
-        /// Retrieves an environment variable value.
-        /// </summary>
-        /// <param name="key">The variable name (case-insensitive).</param>
-        /// <param name="defaultValue">Value to return if variable not found (default: empty string).</param>
-        /// <param name="storeDefault">If true and variable not found, stores the default value (default: true).</param>
-        /// <returns>The variable value, or defaultValue if not found.</returns>
-        /// <remarks>
-        /// Variable lookup is case-insensitive. All keys are normalized to uppercase internally.
-        /// If storeDefault=true and variable not found, the default value is automatically stored.
-        /// </remarks>
-        string GetValue(string key, string defaultValue = "", bool storeDefault = true);
+        void SetValue(string key, string value, string commandName);
 
         /// <summary>
         /// Retrieves all environment variables as a dictionary.
@@ -57,7 +44,7 @@ namespace Xcaciv.Command.Interface
         /// Returns a snapshot of the current environment. Modifications to the returned
         /// dictionary do not affect the environment context; use SetValue() to modify variables.
         /// </remarks>
-        Dictionary<string, string> GetEnvironment();
+        Dictionary<string, string> GetEnvironment(string commandName);
 
         /// <summary>
         /// Indicates whether this context has modified any environment variables.
@@ -78,7 +65,7 @@ namespace Xcaciv.Command.Interface
         /// execution (if the command has ModifiesEnvironment=true).
         /// Overwrites any existing variables with matching keys.
         /// </remarks>
-        void UpdateEnvironment(Dictionary<string, string> dictionary);
+        void UpdateEnvironment(Dictionary<string, string> dictionary, string commandName);
 
         /// <summary>
         /// Set the audit logger for this environment context

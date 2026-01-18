@@ -57,7 +57,7 @@ namespace Xcaciv.Command.Core
         /// </summary>
         /// <param name="childArguments"></param>
         /// <returns></returns>
-        public abstract Task<IIoContext> GetChild(string[]? childArguments = null);
+        public abstract Task<IIoContext> GetChild();
         /// <summary>
         /// handles the Channel output and allows the implementation to handle 
         /// the final output

@@ -28,6 +28,6 @@ namespace Xcaciv.Command.Interface
         /// <param name="childArguments">arguments to pass to child context</param>
         /// <param name="pipeline">specify we are dealing with a pipeline</param>
         /// <returns></returns>
-        Task<T> GetChild(string[]? childArguments = null);
+        Task<T> GetChild();
     }
 }
