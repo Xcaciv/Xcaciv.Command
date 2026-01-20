@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Xcaciv.Command.Interface.Parameters;
 
 namespace Xcaciv.Command.Interface
 {
@@ -21,6 +22,16 @@ namespace Xcaciv.Command.Interface
     public interface ICommandDelegate : IAsyncDisposable
     {
         /// <summary>
+        /// Gets the command text associated with this instance.
+        /// Must be alphanumeric and contain no spaces.
+        /// </summary>
+        string Command { get; }
+        /// <summary>
+        /// Gets the root command that this command is nested under, if any.
+        /// Must be alphanumeric and contain no spaces.
+        /// </summary>
+        string RootCommand { get; }
+        /// <summary>
         /// Primary command execution method.
         /// </summary>
         /// <param name="ioContext">The IO context for input/output and parameter access.</param>
@@ -38,27 +49,22 @@ namespace Xcaciv.Command.Interface
         IAsyncEnumerable<IResult<string>> Main(IIoContext ioContext, IEnvironmentContext env);
 
         /// <summary>
-        /// Outputs detailed usage instructions for the command.
+        /// Retrieves a dictionary containing the environment variables this command uses and their defalut values.
         /// </summary>
-        /// <param name="parameters">Command parameters (may include parameter names for context-specific help).</param>
-        /// <param name="env">The environment context (for environment-dependent help text).</param>
-        /// <returns>Multi-line help text describing command usage, parameters, and examples.</returns>
+        /// <returns>A dictionary where each key is the name of an environment variable and each value is the corresponding
+        /// value. The dictionary is empty if no environment variables are available.</returns>
         /// <remarks>
-        /// Called when user requests help via --HELP flag.
-        /// Should include command syntax, parameter descriptions, and usage examples.
-        /// Use AbstractCommand.BuildHelpString() for consistent formatting.
+        /// This dictionary is required for this command to recieve additional settings. The values will be scoped in the global environment
+        /// with the prefix of the command name. For example, this dictionary might return a key/value pair of ("TIMEOUT", "30"), and the command 
+        /// is named "FETCH". The command will then be able to access the environment variable "TIMEOUT" with a default value of "30". In the 
+        /// global environment, this variable will be stored as "FETCH_TIMEOUT".
         /// </remarks>
-        string Help(string[] parameters, IEnvironmentContext env);
+        Dictionary<string, string> GetDefaultEnvironment();
 
         /// <summary>
-        /// Outputs a single-line summary of the command's purpose.
+        /// Retrieves a list of parameters this command accepts.
         /// </summary>
-        /// <param name="parameters">Command parameters (not typically used for one-line help).</param>
-        /// <returns>A single line describing the command's purpose.</returns>
-        /// <remarks>
-        /// Used when listing all available commands. Should be brief (under 80 characters).
-        /// Format typically: "COMMAND_NAME - Brief description of what it does"
-        /// </remarks>
-        string OneLineHelp(string[] parameters);
+        /// <returns>A list of <see cref="ICommandParameter"/> indicating the parameters for the command.</returns>
+        List<ICommandParameter> GetParameters();
     }
 }

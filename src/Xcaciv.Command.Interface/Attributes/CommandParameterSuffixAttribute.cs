@@ -7,63 +7,15 @@ using System.Threading.Tasks;
 namespace Xcaciv.Command.Interface.Attributes
 {
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = true, Inherited = false)]
-    public class CommandParameterSuffixAttribute : AbstractCommandParameter
+    public class CommandParameterSuffixAttribute : AbstractCommandParameterAttribute
     {
-        private string _defaultValue = "";
-        private string[] _allowedValues = [];
-
         public CommandParameterSuffixAttribute(string name, string description) 
         { 
             this.Name = name;
             this.ValueDescription = description;
+            
+            this.Indication = ParameterIndication.SUFFIX;
         }
-        /// <summary>
-        /// input values that are allowed, anything else will throw an error
-        /// case is ignored
-        /// </summary>
-        public string[] AllowedValues 
-        { 
-            get => _allowedValues;
-            set 
-            {
-                _allowedValues = value ?? [];
-                
-                // Auto-set default value to first allowed value if not already set
-                if (_allowedValues.Length > 0 && string.IsNullOrEmpty(_defaultValue))
-                {
-                    _defaultValue = _allowedValues[0];
-                }
-                
-                // Validate existing default value against new allowed values
-                if (!string.IsNullOrEmpty(_defaultValue))
-                {
-                    ValidateDefaultValue(_defaultValue, _allowedValues);
-                }
-            }
-        }
-        /// <summary>
-        /// used when no value is provided
-        /// this satisfies the IsRequired flag
-        /// </summary>
-        public string DefaultValue 
-        { 
-            get => _defaultValue;
-            set 
-            {
-                ValidateDefaultValue(value, _allowedValues);
-                _defaultValue = value;
-            }
-        }
-        /// <summary>
-        /// specify if the value is required
-        /// </summary>
-        public bool IsRequired { get; set; } = true;
-        /// <summary>
-        /// indicates this value is what is populated when a pipe is used
-        /// only the first parameter specified for pipeline population will be used
-        /// </summary>
-        public bool UsePipe { get; set; } = false;
-
         public override string GetValueDescription()
         {
             string description = ValueDescription;
@@ -74,19 +26,5 @@ namespace Xcaciv.Command.Interface.Attributes
             return description;
         }
 
-        private void ValidateDefaultValue(string defaultValue, string[] allowedValues)
-        {
-            if (string.IsNullOrEmpty(defaultValue) || allowedValues == null || allowedValues.Length == 0)
-            {
-                return;
-            }
-
-            if (!allowedValues.Contains(defaultValue, StringComparer.OrdinalIgnoreCase))
-            {
-                throw new ArgumentException(
-                    $"Default value '{defaultValue}' is not in the allowed values list for parameter '{Name}'. " +
-                    $"Allowed values: {string.Join(", ", allowedValues)}");
-            }
-        }
     }
 }

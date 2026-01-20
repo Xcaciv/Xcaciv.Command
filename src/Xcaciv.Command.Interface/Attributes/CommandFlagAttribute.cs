@@ -11,7 +11,7 @@ namespace Xcaciv.Command.Interface.Attributes
     /// if the flag is present the value is true
     /// </summary>
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = true, Inherited = false)]
-    public class CommandFlagAttribute : AbstractCommandParameter
+    public class CommandFlagAttribute : AbstractCommandParameterAttribute
     {
         /// <summary>
         /// this attribute indicates a toggle flag for a command
@@ -23,9 +23,8 @@ namespace Xcaciv.Command.Interface.Attributes
         { 
             this.Name = name;
             this.ValueDescription = description;
+            this.Indication = ParameterIndication.FLAG;
         }
-
-        public string ShortAlias { get; } = "";
 
         public override string GetIndicator()
         {

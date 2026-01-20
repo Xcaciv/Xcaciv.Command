@@ -373,7 +373,7 @@ public class ParameterCollectionBuilderTests
 }
 
 // Test helper for parameter attributes
-public class TestParameterAttribute : Xcaciv.Command.Interface.Attributes.AbstractCommandParameter
+public class TestParameterAttribute : Xcaciv.Command.Interface.Attributes.AbstractCommandParameterAttribute
 {
     public TestParameterAttribute(string name, Type dataType)
     {
