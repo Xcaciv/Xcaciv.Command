@@ -45,7 +45,7 @@ public class CommandFactory : ICommandFactory
             ioContext.Parameters.Length > 0)
         {
             // Normalize sub-command key to uppercase for consistent lookup
-            var subCommandKey = CommandDescription.GetValidCommandName(ioContext.Parameters[0], upper: true);
+            var subCommandKey = NamesValidator.GetValidCommandName(ioContext.Parameters[0], upper: true);
             
             if (commandDescription.SubCommands.TryGetValue(subCommandKey, out var subCommandDescription) &&
                 subCommandDescription != null)

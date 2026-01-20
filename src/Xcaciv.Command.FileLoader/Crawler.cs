@@ -54,7 +54,7 @@ public class Crawler : ICrawler
     public void SetSecurityPolicy(AssemblySecurityPolicy policy)
     {
         _securityPolicy = policy;
-        Trace.WriteLine($"[Xcaciv.Loader 2.1.1] Crawler security policy set to: {policy}");
+        Trace.WriteLine($"[Xcaciv.Loader] Crawler security policy set to: {policy}");
     }
     
     /// <summary>
@@ -116,7 +116,7 @@ public class Crawler : ICrawler
                         }
                         catch (Exception ex)
                         {
-                            Trace.WriteLine($"[Xcaciv.Loader 2.1.1] Error processing command type [{commandType.FullName}] in package [{key}]: {ex.Message}");
+                            Trace.WriteLine($"[Xcaciv.Loader] Error processing command type [{commandType.FullName}] in package [{key}]: {ex.Message}");
                         }
                     }
 
@@ -126,7 +126,7 @@ public class Crawler : ICrawler
             catch (SecurityException ex)
             {
                 // Xcaciv.Loader 2.1.1: Enhanced security exception handling
-                Trace.WriteLine($"[Xcaciv.Loader 2.1.1] Security violation loading package [{key}] from [{binPath}]: " +
+                Trace.WriteLine($"[Xcaciv.Loader] Security violation loading package [{key}] from [{binPath}]: " +
                     $"SecurityPolicy={_securityPolicy}, " +
                     $"BasePathRestriction={Path.GetDirectoryName(binPath)}. " +
                     $"Details: {ex.Message}");
@@ -134,22 +134,22 @@ public class Crawler : ICrawler
             }
             catch (FileNotFoundException ex)
             {
-                Trace.WriteLine($"[Xcaciv.Loader 2.1.1] Assembly not found for package [{key}] at [{binPath}]: {ex.Message}");
+                Trace.WriteLine($"[Xcaciv.Loader] Assembly not found for package [{key}] at [{binPath}]: {ex.Message}");
                 return;
             }
             catch (FileLoadException ex)
             {
-                Trace.WriteLine($"[Xcaciv.Loader 2.1.1] Failed to load assembly for package [{key}] from [{binPath}]: {ex.Message}");
+                Trace.WriteLine($"[Xcaciv.Loader] Failed to load assembly for package [{key}] from [{binPath}]: {ex.Message}");
                 return;
             }
             catch (BadImageFormatException ex)
             {
-                Trace.WriteLine($"[Xcaciv.Loader 2.1.1] Invalid assembly format for package [{key}] at [{binPath}]: {ex.Message}");
+                Trace.WriteLine($"[Xcaciv.Loader] Invalid assembly format for package [{key}] at [{binPath}]: {ex.Message}");
                 return;
             }
             catch (Exception ex)
             {
-                Trace.WriteLine($"[Xcaciv.Loader 2.1.1] Unexpected error loading package [{key}] from [{binPath}]: {ex.GetType().Name}: {ex.Message}");
+                Trace.WriteLine($"[Xcaciv.Loader] Unexpected error loading package [{key}] from [{binPath}]: {ex.GetType().Name}: {ex.Message}");
                 return; // Skip this package due to error
             }
 

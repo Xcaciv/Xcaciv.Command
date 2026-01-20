@@ -16,7 +16,7 @@ public class PipelineExecutor : IPipelineExecutor
     public async Task ExecuteAsync(
         string commandLine,
         IIoContext ioContext,
-        IEnvironmentContext environmentContext,
+        IControllerEnvironmentContext environmentContext,
         Func<string, IIoContext, IEnvironmentContext, Task> executeCommand)
     {
         await ExecuteAsync(commandLine, ioContext, environmentContext,
@@ -27,7 +27,7 @@ public class PipelineExecutor : IPipelineExecutor
     public async Task ExecuteAsync(
         string commandLine,
         IIoContext ioContext,
-        IEnvironmentContext environmentContext,
+        IControllerEnvironmentContext environmentContext,
         Func<string, IIoContext, IEnvironmentContext, CancellationToken, Task> executeCommand,
         CancellationToken cancellationToken)
     {
@@ -66,7 +66,7 @@ public class PipelineExecutor : IPipelineExecutor
     private async Task<(List<Task>, Channel<IResult<string>>?)> CreatePipelineStages(
         string commandLine,
         IIoContext ioContext,
-        IEnvironmentContext environmentContext,
+        IControllerEnvironmentContext environmentContext,
         Func<string, IIoContext, IEnvironmentContext, CancellationToken, Task> executeCommand,
         CancellationToken cancellationToken)
     {
@@ -82,25 +82,26 @@ public class PipelineExecutor : IPipelineExecutor
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var commandName = CommandDescription.GetValidCommandName(command).ToString();
-            var args = CommandDescription.GetArgumentsFromCommandline(command);
-            var childContext = await ioContext.GetChild(args).ConfigureAwait(false);
+            var commandName = NamesValidator.GetValidCommandName(command).ToString();
+            var args = NamesValidator.GetArgumentsFromCommandline(command);
+            var childIoContext = await ioContext.GetChild().ConfigureAwait(false);
 
             // Set pipeline stage metadata for audit logging
-            childContext.SetPipelineStage(currentStage, totalStages);
+            childIoContext.SetPipelineStage(currentStage, totalStages);
 
             if (pipeChannel != null)
             {
-                childContext.SetInputPipe(pipeChannel.Reader);
+                childIoContext.SetInputPipe(pipeChannel.Reader);
             }
 
             pipeChannel = Channel.CreateBounded<IResult<string>>(new BoundedChannelOptions(Configuration.MaxChannelQueueSize)
             {
                 FullMode = GetChannelFullMode(Configuration.BackpressureMode)
             });
-            childContext.SetOutputPipe(pipeChannel.Writer);
+            childIoContext.SetOutputPipe(pipeChannel.Writer);
 
-            tasks.Add(RunStageAsync(commandName, childContext, environmentContext, executeCommand, Configuration, cancellationToken));
+            var childEnvironmentContext = await environmentContext.GetChild();
+            tasks.Add(RunStageAsync(commandName, childIoContext, childEnvironmentContext, executeCommand, Configuration, cancellationToken));
             currentStage++;
         }
 

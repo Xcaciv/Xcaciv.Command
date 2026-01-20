@@ -243,12 +243,12 @@ public class CommandController : Interface.ICommandController
         }
         else
         {
-            var commandName = CommandDescription.GetValidCommandName(commandLine);
-            var args = CommandDescription.GetArgumentsFromCommandline(commandLine);
+            var commandName = NamesValidator.GetValidCommandName(commandLine);
+            var args = NamesValidator.GetArgumentsFromCommandline(commandLine);
             await ioContext.SetParameters([.. args]).ConfigureAwait(false);
 
-            await using var childContext = await ioContext.GetChild().ConfigureAwait(false);
-            await _commandExecutor.ExecuteAsync(commandName, ioContext, env, cancellationToken).ConfigureAwait(false);
+            var childEnv = await env.GetChild().ConfigureAwait(false);
+            await _commandExecutor.ExecuteAsync(commandName, ioContext, childEnv, cancellationToken).ConfigureAwait(false);
         }
     }
 
@@ -276,12 +276,12 @@ public class CommandController : Interface.ICommandController
         Task.Run(() => _commandExecutor.GetHelpAsync(command, context, env)).GetAwaiter().GetResult();
     }
 
-    private Task ExecuteCommandInternax(string commandKey, IIoContext ioContext, IEnvironmentContext env)
+    private Task ExecuteCommandInternal(string commandKey, IIoContext ioContext, IEnvironmentContext env)
     {
         return _commandExecutor.ExecuteAsync(commandKey, ioContext, env);
     }
 
-    private Task ExecuteCommandInternalx(string commandKey, IIoContext ioContext, IEnvironmentContext env, CancellationToken cancellationToken)
+    private Task ExecuteCommandInternal(string commandKey, IIoContext ioContext, IEnvironmentContext env, CancellationToken cancellationToken)
     {
         return _commandExecutor.ExecuteAsync(commandKey, ioContext, env, cancellationToken);
     }

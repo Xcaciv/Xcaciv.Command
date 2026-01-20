@@ -144,7 +144,7 @@ public class CommandExecutor : ICommandExecutor
     {
         try
         {
-            var commandKey = CommandDescription.GetValidCommandName(command);
+            var commandKey = NamesValidator.GetValidCommandName(command);
             if (_registry.TryGetCommand(commandKey, out var description) && description != null)
             {
                 var commandInstance = _commandFactory.CreateCommand(description, context);

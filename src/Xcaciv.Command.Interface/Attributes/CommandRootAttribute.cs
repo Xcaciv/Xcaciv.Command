@@ -26,7 +26,7 @@ namespace Xcaciv.Command.Interface.Attributes
         public string Command { 
             get;
             set
-            { field = CommandNameValidator.GetValidCommandName(value); }
+            { field = NamesValidator.GetValidCommandName(value); }
         }  = String.Empty;
         /// <summary>
         /// What does this command do

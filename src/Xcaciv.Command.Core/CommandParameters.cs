@@ -37,8 +37,8 @@ public class CommandParameters
             if (Attribute.GetCustomAttribute(commandType, typeof(CommandRootAttribute)) is CommandRootAttribute rootAttribute)
             {
                 // Normalize command names to uppercase for consistent lookups
-                var rootCommandName = CommandDescription.GetValidCommandName(rootAttribute.Command, upper: true);
-                var subCommandName = CommandDescription.GetValidCommandName(attributes.Command, upper: true);
+                var rootCommandName = NamesValidator.GetValidCommandName(rootAttribute.Command, upper: true);
+                var subCommandName = NamesValidator.GetValidCommandName(attributes.Command, upper: true);
                 
                 // this command is a sub command, add it to the parent
                 if (description == null)

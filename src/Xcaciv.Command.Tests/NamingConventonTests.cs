@@ -18,7 +18,7 @@ namespace Xcaciv.Command.Tests
             var commandLine = $"{expected} - some options here";
             var manager = new CommandController();
 
-            var actual = CommandDescription.GetValidCommandName(commandLine);
+            var actual = NamesValidator.GetValidCommandName(commandLine);
 
             Assert.Equal(expected, actual);
         }
@@ -29,7 +29,7 @@ namespace Xcaciv.Command.Tests
             var commandLine = $"-{expected} - some options here";
             var manager = new CommandController();
 
-            var actual = CommandDescription.GetValidCommandName(commandLine);
+            var actual = NamesValidator.GetValidCommandName(commandLine);
 
             Assert.Equal(expected, actual);
         }
@@ -40,7 +40,7 @@ namespace Xcaciv.Command.Tests
             var commandLine = $"-{expected} - some options here";
             var manager = new CommandController();
 
-            var actual = CommandDescription.GetValidCommandName(commandLine);
+            var actual = NamesValidator.GetValidCommandName(commandLine);
 
             Assert.Equal(expected, actual);
         }
@@ -51,7 +51,7 @@ namespace Xcaciv.Command.Tests
             var commandLine = $"{expected} - some options here";
             var manager = new CommandController();
 
-            var actual = CommandDescription.GetValidCommandName(commandLine);
+            var actual = NamesValidator.GetValidCommandName(commandLine);
 
             Assert.Equal(expected, actual);
         }
@@ -62,7 +62,7 @@ namespace Xcaciv.Command.Tests
             var commandLine = $"-{expected} - some options here";
             var manager = new CommandController();
 
-            var actual = CommandDescription.GetValidCommandName(commandLine);
+            var actual = NamesValidator.GetValidCommandName(commandLine);
 
             Assert.Equal(expected, actual);
         }
@@ -70,12 +70,11 @@ namespace Xcaciv.Command.Tests
         [Fact()]
         public void PrepareArgsHandleQuotesTest()
         {
-            var command = "PACKAGE";
             var expected = new[] { "search", "nuget", "-name", "some text" };
             var commandLine = "package search nuget -name \"some text\"";
             var manager = new CommandController();
 
-            var actual = CommandDescription.GetArgumentsFromCommandline(commandLine);
+            var actual = NamesValidator.GetArgumentsFromCommandline(commandLine);
             Assert.Equal(expected, actual);
         }
 
@@ -87,7 +86,7 @@ namespace Xcaciv.Command.Tests
             var commandLine = $"{command} " + string.Join(' ', expected);
             var manager = new CommandController();
 
-            var actual = CommandDescription.GetArgumentsFromCommandline(commandLine);
+            var actual = NamesValidator.GetArgumentsFromCommandline(commandLine);
             Assert.Equal(expected, actual);
         }
 
@@ -100,7 +99,7 @@ namespace Xcaciv.Command.Tests
             var commandLine = $"{command} " + string.Join(' ', expected);
             var manager = new CommandController();
 
-            var actual = CommandDescription.GetArgumentsFromCommandline(commandLine);
+            var actual = NamesValidator.GetArgumentsFromCommandline(commandLine);
             Assert.Equal(expected, actual);
         }
 
@@ -110,7 +109,7 @@ namespace Xcaciv.Command.Tests
             var expected = "DIR";
             var commandLine = $"{expected}*'`%^! -some options here";
 
-            var actual = CommandDescription.GetValidCommandName(commandLine);
+            var actual = NamesValidator.GetValidCommandName(commandLine);
 
             Assert.Equal(expected, actual);
         }
@@ -122,7 +121,7 @@ namespace Xcaciv.Command.Tests
             var expected = new[] { "-some", "options", "here" };
             var commandLine = $"{command} *'`%^!" + string.Join(' ', expected);
 
-            var actual = CommandDescription.GetArgumentsFromCommandline(commandLine);
+            var actual = NamesValidator.GetArgumentsFromCommandline(commandLine);
             Assert.Equal(expected, actual);
         }
 
@@ -133,7 +132,7 @@ namespace Xcaciv.Command.Tests
             var expected = new[] { "-some", @"two word", "and_three_word", "options" , ".*? [0-9|a-z] ~!@#$%^&*()" };
             var commandLine = $@"{command} """ + string.Join(@""" """, expected) + '"';
 
-            var actual = CommandDescription.GetArgumentsFromCommandline(commandLine);
+            var actual = NamesValidator.GetArgumentsFromCommandline(commandLine);
             Assert.Equal(expected, actual);
         }
     }

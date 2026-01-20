@@ -14,6 +14,52 @@ namespace Xcaciv.Command.Core
         private static IHelpService? _helpService;
 
         public ResultFormat OutputFormat { get; protected set; } = ResultFormat.General;
+        protected string _command = string.Empty;
+        private string _rootCommand = string.Empty;
+
+        public string Command
+        {
+            get
+            {
+                if (String.IsNullOrEmpty(_command))
+                {
+                    var thisType = GetType();
+                    var registration = Attribute.GetCustomAttribute(thisType, typeof(CommandRegisterAttribute)) as CommandRegisterAttribute;
+                    if (registration == null)
+                    {
+                        throw new InvalidOperationException("CommandRegisterAttribute is required for all commands");
+                    }
+                    _command = registration.Command;
+                }
+                return _command;
+            }
+            set
+            {
+                _command = NamesValidator.GetValidCommandName(value);
+            }
+        }
+
+        public string RootCommand
+        {
+            get
+            {
+                if (String.IsNullOrEmpty(_rootCommand))
+                {
+                    var thisType = GetType();
+                    var registration = Attribute.GetCustomAttribute(thisType, typeof(CommandRootAttribute)) as CommandRootAttribute;
+                    if (registration == null)
+                    {
+                        throw new InvalidOperationException("CommandRegisterAttribute is required for all commands");
+                    }
+                    _rootCommand = registration.Command;
+                }
+                return _rootCommand;
+            }
+            set
+            {
+                _rootCommand = NamesValidator.GetValidCommandName(value);
+            }
+        }
 
         /// <summary>
         /// Sets the help service used by all AbstractCommand instances for help formatting.
@@ -289,5 +335,24 @@ namespace Xcaciv.Command.Core
         {
         }
 
+        public virtual Dictionary<string, string> GetDefaultEnvironment()
+        {
+            return new Dictionary<string, string>();
+        }
+
+        /// <summary>
+        /// Retrieves a list of all parameters associated with the command, including ordered, flag, named, and suffix
+        /// parameters. You must override this method if you are not using the standard attribute-based parameter definition.
+        /// </summary>
+        /// <returns>A list of <see cref="ICommandParameter"/> objects representing all parameters for the command.</returns>
+        public virtual List<ICommandParameter> GetParameters()
+        {
+            var parameters = new List<ICommandParameter>();
+            parameters.AddRange(GetOrderedParameters(false).ToList<ICommandParameter>());
+            parameters.AddRange(GetFlagParameters().ToList<ICommandParameter>());
+            parameters.AddRange(GetNamedParameters(false).ToList<ICommandParameter>());
+            parameters.AddRange(GetSuffixParameters(false).ToList<ICommandParameter>());
+            return parameters;
+        }
     }
 }

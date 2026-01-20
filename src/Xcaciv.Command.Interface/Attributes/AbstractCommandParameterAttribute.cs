@@ -36,7 +36,7 @@ namespace Xcaciv.Command.Interface.Attributes
         public string Name
         {
             get { return _helpName; }
-            set { _helpName = CommandNameValidator.GetValidCommandName(value, false); }
+            set { _helpName = NamesValidator.GetValidCommandName(value, false); }
         }
         /// <summary>
         /// Data type of the parameter
