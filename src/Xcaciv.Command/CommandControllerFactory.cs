@@ -33,12 +33,6 @@ public static class CommandControllerFactory
             controller = new CommandController();
         }
 
-        // Apply help command
-        if (!string.IsNullOrWhiteSpace(options.HelpCommand))
-        {
-            controller.HelpCommand = options.HelpCommand;
-        }
-
         // Enable built-in commands
         if (options.EnableDefaultCommands)
         {

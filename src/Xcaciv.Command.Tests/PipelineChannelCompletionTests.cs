@@ -18,7 +18,7 @@ public class PipelineChannelCompletionTests
     public async Task PipelineCompletesChannels_WhenProducerAndConsumerFinishAsync()
     {
         var pipelineExecutor = new PipelineExecutor();
-        var environmentContext = new EnvironmentContext();
+        var environmentContext = new ControllerEnvironmentContext(new EnvironmentContext());
         var rootContext = new TestTextIo();
         var consumerCompletions = 0;
 
@@ -47,7 +47,7 @@ public class PipelineChannelCompletionTests
     public async Task PipelineCompletesChannels_AcrossMultipleStagesAsync()
     {
         var pipelineExecutor = new PipelineExecutor();
-        var environmentContext = new EnvironmentContext();
+        var environmentContext = new ControllerEnvironmentContext(new EnvironmentContext());
         var rootContext = new TestTextIo();
         var passThroughCompletions = 0;
         var consumerCompletions = 0;
@@ -100,6 +100,14 @@ public class PipelineChannelCompletionTests
     /// </summary>
     private sealed class PipelineChannelProducerCommand : ICommandDelegate
     {
+        public string Command => "PIPECHANNELPRODUCER";
+
+        public string RootCommand => string.Empty;
+
+        public Dictionary<string, string> GetDefaultEnvironment() => new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        public List<ICommandParameter> GetParameters() => new List<ICommandParameter>();
+
         public async IAsyncEnumerable<IResult<string>> Main(IIoContext ioContext, IEnvironmentContext env)
         {
             if (ioContext.Parameters.Length == 0)
@@ -115,8 +123,6 @@ public class PipelineChannelCompletionTests
             }
         }
 
-        public string Help(string[] parameters, IEnvironmentContext env) => "Producer test command";
-        public string OneLineHelp(string[] parameters) => "PIPECHANNELPRODUCER    Emits deterministic pipeline output";
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 
@@ -131,6 +137,14 @@ public class PipelineChannelCompletionTests
         {
             _onCompleted = onCompleted;
         }
+
+        public string Command => "PIPECHANNELPASSTHROUGH";
+
+        public string RootCommand => string.Empty;
+
+        public Dictionary<string, string> GetDefaultEnvironment() => new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        public List<ICommandParameter> GetParameters() => new List<ICommandParameter>();
 
         public async IAsyncEnumerable<IResult<string>> Main(IIoContext ioContext, IEnvironmentContext env)
         {
@@ -148,8 +162,6 @@ public class PipelineChannelCompletionTests
             _onCompleted?.Invoke();
         }
 
-        public string Help(string[] parameters, IEnvironmentContext env) => "PassThrough test command";
-        public string OneLineHelp(string[] parameters) => "PIPECHANNELPASSTHROUGH Reads from input and forwards to output";
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 
@@ -164,6 +176,14 @@ public class PipelineChannelCompletionTests
         {
             _onCompleted = onCompleted;
         }
+
+        public string Command => "PIPECHANNELCONSUMER";
+
+        public string RootCommand => string.Empty;
+
+        public Dictionary<string, string> GetDefaultEnvironment() => new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        public List<ICommandParameter> GetParameters() => new List<ICommandParameter>();
 
         public async IAsyncEnumerable<IResult<string>> Main(IIoContext ioContext, IEnvironmentContext env)
         {
@@ -182,8 +202,6 @@ public class PipelineChannelCompletionTests
             }
         }
 
-        public string Help(string[] parameters, IEnvironmentContext env) => "Consumer test command";
-        public string OneLineHelp(string[] parameters) => "PIPECHANNELCONSUMER    Validates that the pipeline closes correctly";
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 
@@ -191,7 +209,7 @@ public class PipelineChannelCompletionTests
     public async Task Pipeline_GracefullyHandlesParentCancellation()
     {
         var pipelineExecutor = new PipelineExecutor();
-        var environmentContext = new EnvironmentContext();
+        var environmentContext = new ControllerEnvironmentContext(new EnvironmentContext());
         var rootContext = new TestTextIo();
         var commandStarted = new TaskCompletionSource<bool>();
         var cancellationRequested = new TaskCompletionSource<bool>();
@@ -257,18 +275,21 @@ public class PipelineChannelCompletionTests
             _cancellationRequested = cancellationRequested;
         }
 
+        public string Command => "SLOWCOMMAND";
+
+        public string RootCommand => string.Empty;
+
+        public Dictionary<string, string> GetDefaultEnvironment() => new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        public List<ICommandParameter> GetParameters() => new List<ICommandParameter>();
+
         public async IAsyncEnumerable<IResult<string>> Main(IIoContext ioContext, IEnvironmentContext env)
         {
             _commandStarted.SetResult(true);
-            
-            // Wait for cancellation signal
             await _cancellationRequested.Task;
-            
             yield return CommandResult<string>.Success("Should not reach here");
         }
 
-        public string Help(string[] parameters, IEnvironmentContext env) => "Slow test command";
-        public string OneLineHelp(string[] parameters) => "SLOWCOMMAND            Command that waits for cancellation";
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 }

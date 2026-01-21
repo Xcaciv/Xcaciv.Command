@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Xcaciv.Command.Interface;
+using Xcaciv.Command.Interface.Parameters;
 using SystemCommand = System.CommandLine.Command;
 
 namespace Xcaciv.Command.Extensions.Commandline
@@ -22,6 +23,10 @@ namespace Xcaciv.Command.Extensions.Commandline
         private T? command;
 
         protected T? WrappedCommand => command;
+
+        public string Command => command?.Name ?? string.Empty;
+
+        public string RootCommand => string.Empty;
 
         public virtual void SetCommand(T commandToWrap)
         {
@@ -92,64 +97,19 @@ namespace Xcaciv.Command.Extensions.Commandline
             }
         }
 
-        public virtual string Help(string[] parameters, IEnvironmentContext env)
-        {
-            if (command == null)
-            {
-                throw new InvalidOperationException("Command has not been initialized. Call SetCommand before requesting help.");
-            }
-
-            var helpArguments = (parameters ?? Array.Empty<string>()).Concat(["--help"]).ToArray();
-
-            using var standardOutWriter = new StringWriter();
-            using var standardErrorWriter = new StringWriter();
-
-            var originalOut = Console.Out;
-            var originalError = Console.Error;
-
-            // Using synchronous Wait() here because Help() is a synchronous method.
-            // The ICommandDelegate interface defines Help as string (not Task<string>),
-            // so we cannot use await. Synchronous blocking is acceptable here since
-            // help generation is a fast, non-I/O-bound operation.
-            ConsoleRedirectionSemaphore.Wait();
-            try
-            {
-                Console.SetOut(standardOutWriter);
-                Console.SetError(standardErrorWriter);
-
-                var parseResult = command.Parse(helpArguments);
-                parseResult.Invoke();
-
-                var output = standardOutWriter.ToString();
-                var errors = standardErrorWriter.ToString();
-
-                return string.IsNullOrWhiteSpace(errors) ? output : output + errors;
-            }
-            finally
-            {
-                Console.SetOut(originalOut);
-                Console.SetError(originalError);
-                ConsoleRedirectionSemaphore.Release();
-            }
-        }
-
-        public virtual string OneLineHelp(string[] parameters)
-        {
-            if (command == null)
-            {
-                throw new InvalidOperationException("Command has not been initialized. Call SetCommand before requesting help text.");
-            }
-
-            var description = string.IsNullOrWhiteSpace(command.Description)
-                ? "No description provided."
-                : command.Description;
-
-            return $"{command.Name,-12} {description}";
-        }
-
         public virtual ValueTask DisposeAsync()
         {
             return ValueTask.CompletedTask;
+        }
+
+        public virtual Dictionary<string, string> GetDefaultEnvironment()
+        {
+            return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        public virtual List<ICommandParameter> GetParameters()
+        {
+            return new List<ICommandParameter>();
         }
 
         private static async Task<string> CollectPipedInput(IIoContext ioContext)

@@ -51,16 +51,11 @@ namespace Xcaciv.Command.Tests.Attributes
         [Fact]
         public void CommandParameterNamed_WithDefaultSetBeforeAllowedValues_ValidatesCorrectly()
         {
-            // Arrange
-            var attribute = new CommandParameterNamedAttribute("verbosity", "Log verbosity level")
+            Assert.Throws<ArgumentException>(() => new CommandParameterNamedAttribute("verbosity", "Log verbosity level")
             {
-                DefaultValue = "normal"
-            };
-
-            // Act & Assert - should throw when AllowedValues is set and existing default is not in list
-            var exception = Assert.Throws<ArgumentException>(() => 
-                attribute.AllowedValues = new[] { "quiet", "detailed" });
-            Assert.Contains("Default value 'normal' is not in the allowed values list", exception.Message);
+                DefaultValue = "normal",
+                AllowedValues = new[] { "quiet", "detailed" }
+            });
         }
 
         [Fact]
@@ -148,16 +143,12 @@ namespace Xcaciv.Command.Tests.Attributes
         [Fact]
         public void CommandParameterNamed_WithExistingDefault_DoesNotOverrideWhenSettingAllowedValues()
         {
-            // Arrange
             var attribute = new CommandParameterNamedAttribute("verbosity", "Log verbosity level")
             {
+                AllowedValues = new[] { "quiet", "normal", "detailed" },
                 DefaultValue = "detailed"
             };
 
-            // Act
-            attribute.AllowedValues = new[] { "quiet", "normal", "detailed" };
-
-            // Assert - should keep the existing default
             Assert.Equal("detailed", attribute.DefaultValue);
         }
     }

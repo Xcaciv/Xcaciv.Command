@@ -11,8 +11,6 @@ namespace Xcaciv.Command.Core
 {
     public abstract class AbstractCommand : ICommandDelegate
     {
-        private static IHelpService? _helpService;
-
         public ResultFormat OutputFormat { get; protected set; } = ResultFormat.General;
         protected string _command = string.Empty;
         private string _rootCommand = string.Empty;
@@ -62,65 +60,12 @@ namespace Xcaciv.Command.Core
         }
 
         /// <summary>
-        /// Sets the help service used by all AbstractCommand instances for help formatting.
-        /// Should be set during application startup, typically by the CommandController.
-        /// TODO: make this non-static !!!
-        /// </summary>
-        public static void SetHelpService(IHelpService helpService)
-        {
-            _helpService = helpService ?? throw new ArgumentNullException(nameof(helpService));
-        }
-
-        /// <summary>
         /// this should be overwritten to dispose of any unmanaged items
         /// </summary>
         /// <returns></returns>
         public virtual ValueTask DisposeAsync()
         {
             return ValueTask.CompletedTask;
-        }
-
-        /// <summary>
-        /// Generates full help output for the command using the configured help service.
-        /// </summary>
-        /// <param name="parameters">Command parameters for context</param>
-        /// <param name="env">Environment context</param>
-        /// <returns>Formatted help string</returns>
-        public virtual string Help(string[] parameters, IEnvironmentContext env)
-        {
-            if (_helpService == null)
-            {
-                throw new InvalidOperationException(
-                    "HelpService has not been configured. Call AbstractCommand.SetHelpService() during application startup.");
-            }
-
-            return _helpService.BuildHelp(this, parameters, env);
-        }
-
-        /// <summary>
-        /// Generates single line help summary for command listing.
-        /// </summary>
-        /// <param name="parameters">Command parameters for context</param>
-        /// <returns>Single line formatted help string</returns>
-        public virtual string OneLineHelp(string[] parameters)
-        {
-            if (_helpService == null)
-            {
-                var thisType = GetType();
-                var baseCommand = Attribute.GetCustomAttribute(thisType, typeof(CommandRegisterAttribute)) as CommandRegisterAttribute;
-                if (baseCommand == null)
-                {
-                    throw new InvalidOperationException("CommandRegisterAttribute is required for all commands");
-                }
-
-                var isRoot = Attribute.GetCustomAttribute(thisType, typeof(CommandRootAttribute)) is CommandRootAttribute;
-                var prefix = isRoot ? "-\t" : "";
-                return $"{prefix}{baseCommand.Command,-12} {baseCommand.Description}";
-            }
-
-            var commandParameters = new CommandParameters();
-            var commandDesc = commandParameters.CreatePackageDescription(GetType(), null!);
-            return _helpService.BuildOneLineHelp(commandDesc);
         }
 
         public async IAsyncEnumerable<IResult<string>> Main(IIoContext io, IEnvironmentContext environment)
@@ -150,16 +95,8 @@ namespace Xcaciv.Command.Core
             else
             {
                 var parameterArray = io.Parameters ?? Array.Empty<string>();
-                var isHelp = _helpService?.IsHelpRequest(parameterArray) ?? false;
-                if (isHelp)
-                {
-                    yield return CommandResult<string>.Success(Help(parameterArray, environment), ResultFormat.General);
-                }
-                else
-                {
-                    var executionResult = HandleExecution(processedParameters, environment);
-                    yield return executionResult;
-                }
+                var executionResult = HandleExecution(processedParameters, environment);
+                yield return executionResult;
             }
         }
 

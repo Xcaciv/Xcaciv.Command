@@ -33,17 +33,6 @@
         /// <param name="env">Environment context</param>
         /// <param name="cancellationToken">Cancellation token to cancel execution</param>
         Task Run(string commandLine, IIoContext output, IControllerEnvironmentContext env, CancellationToken cancellationToken);
-        
-        /// <summary>
-        /// Asynchronously get help information for a command.
-        /// This is the primary method for retrieving command documentation.
-        /// </summary>
-        /// <param name="command">Command name or empty string for all commands</param>
-        /// <param name="output">IO context for output</param>
-        /// <param name="env">Environment context</param>
-        /// <param name="cancellationToken">Cancellation token</param>
-        Task GetHelpAsync(string command, IIoContext output, IEnvironmentContext env, CancellationToken cancellationToken = default);
-
         /// <summary>
         /// install a single command into the index
         /// </summary>

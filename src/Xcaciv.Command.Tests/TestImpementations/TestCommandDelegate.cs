@@ -17,6 +17,14 @@ namespace Xcaciv.Command.Tests.TestImplementations
         private readonly Func<string[], IEnvironmentContext, string>? _helpFunc;
         private readonly Func<string[], string>? _oneLineHelpFunc;
 
+        public string Command { get; set; } = "TEST";
+
+        public string RootCommand { get; set; } = string.Empty;
+
+        public Dictionary<string, string> GetDefaultEnvironment() => new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        public List<ICommandParameter> GetParameters() => new List<ICommandParameter>();
+
         public TestCommandDelegate(
             Func<IIoContext, IEnvironmentContext, IAsyncEnumerable<IResult<string>>>? mainFunc = null,
             Func<string[], IEnvironmentContext, string>? helpFunc = null,
@@ -42,16 +50,6 @@ namespace Xcaciv.Command.Tests.TestImplementations
             }
         }
 
-        public string Help(string[] parameters, IEnvironmentContext env)
-        {
-            return _helpFunc?.Invoke(parameters, env) ?? "Test command help";
-        }
-
-        public string OneLineHelp(string[] parameters)
-        {
-            return _oneLineHelpFunc?.Invoke(parameters) ?? "Test command one-line help";
-        }
-
         public ValueTask DisposeAsync()
         {
             return ValueTask.CompletedTask;
@@ -69,6 +67,14 @@ namespace Xcaciv.Command.Tests.TestImplementations
         {
             _prefix = prefix;
         }
+
+        public string Command => "ECHO";
+
+        public string RootCommand => string.Empty;
+
+        public Dictionary<string, string> GetDefaultEnvironment() => new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        public List<ICommandParameter> GetParameters() => new List<ICommandParameter>();
 
         public async IAsyncEnumerable<IResult<string>> Main(IIoContext io, IEnvironmentContext environment)
         {
@@ -96,16 +102,6 @@ namespace Xcaciv.Command.Tests.TestImplementations
                     yield return CommandResult<string>.Success(_prefix + param);
                 }
             }
-        }
-
-        public string Help(string[] parameters, IEnvironmentContext env)
-        {
-            return "Echo command - outputs input";
-        }
-
-        public string OneLineHelp(string[] parameters)
-        {
-            return "ECHO         Echo input";
         }
 
         public ValueTask DisposeAsync()
