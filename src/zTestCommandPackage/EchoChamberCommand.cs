@@ -9,7 +9,7 @@ using Xcaciv.Command.Interface.Attributes;
 
 namespace zTestCommandPackage
 {
-    [CommandRegister("ECHO2", "echo-echo")]
+    [CommandRegister("ECHO2", "test command that echoes twice (echo-echo)")]
     public class EchoChamberCommand : EchoCommand, ICommandDelegate
     {
         public EchoChamberCommand() 

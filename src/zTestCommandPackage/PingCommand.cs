@@ -10,7 +10,7 @@ using Xcaciv.Command.Interface.Attributes;
 
 namespace zTestCommandPackage
 {
-    [CommandRegister("PING", "PING")]
+    [CommandRegister("PING", "test command with parameters that outputs like echo")]
     [CommandParameterOrdered("echo_word", "ECHO")]
     [CommandParameterNamed("optional", "option", AllowedValues = ["1", "2"])]
     public class PingCommand : ICommandDelegate

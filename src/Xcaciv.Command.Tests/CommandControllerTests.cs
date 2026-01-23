@@ -45,7 +45,7 @@ namespace Xcaciv.Command.Tests
 
             // verify the output of the first run
             // by looking at the output of the second output line
-            Assert.Equal("is", textio.Children.First().Output[1]);
+            Assert.Equal("is", textio.Output[1]);
         }
         [Fact()]
         public async Task RunSubCommandsTestAsync()
@@ -60,8 +60,8 @@ namespace Xcaciv.Command.Tests
             await controller.Run("do echo what is up", textio, env);
 
             // verify the output of the first run
-            // by looking at the output of the second output line
-            Assert.Equal("what is up", textio.Children.First().Output.First());
+            // by looking at the output of the first output line
+            Assert.Equal("what is up", textio.Output.First());
         }
         [Fact()]
         public async Task PipeCommandsTestAsync()
@@ -153,7 +153,7 @@ namespace Xcaciv.Command.Tests
             var env = new ControllerEnvironmentContext();
             await controller.Run("echo --help", textio, env);
 
-            var output = textio.GatherChildOutput();
+            var output = textio.ToString();
             Assert.Contains("test command to output", output);
         }
 
@@ -168,7 +168,7 @@ namespace Xcaciv.Command.Tests
             var textio = new TestImpementations.TestTextIo();
             var env = new ControllerEnvironmentContext();
             await controller.Run("do say --help", textio, env);
-            var output = textio.GatherChildOutput();
+            var output = textio.ToString();
 
             // Note: currently Loader is not unloading assemblies for performance reasons
             Assert.Contains("funny test sub command", output);
@@ -183,9 +183,9 @@ namespace Xcaciv.Command.Tests
             controller.LoadCommands(string.Empty);
 
             var textio = new TestImpementations.TestTextIo();
-            var env = new EnvironmentContext();
+            var env = new ControllerEnvironmentContext();
             await controller.Run("do --help", textio, env);
-            var output = textio.GatherChildOutput();
+            var output = textio.ToString();
 
             Assert.Contains("funny test sub command", output);
         }
@@ -200,7 +200,7 @@ namespace Xcaciv.Command.Tests
             var controller = new CommandController();
             controller.RegisterBuiltInCommands();
 
-            var env = new EnvironmentContext();
+            var env = new ControllerEnvironmentContext();
             var textio = new TestImpementations.TestTextIo();
             
             // This should not throw an exception
@@ -224,7 +224,7 @@ namespace Xcaciv.Command.Tests
             var controller = new CommandController();
             controller.RegisterBuiltInCommands();
 
-            var env = new EnvironmentContext();
+            var env = new ControllerEnvironmentContext();
             var textio = new TestImpementations.TestTextIo();
             
             // Request help for Say command
@@ -248,7 +248,7 @@ namespace Xcaciv.Command.Tests
             var controller = new CommandController();
             controller.RegisterBuiltInCommands();
 
-            var env = new EnvironmentContext();
+            var env = new ControllerEnvironmentContext();
             var textio = new TestImpementations.TestTextIo();
             
             // Piping should work: echo hello | say

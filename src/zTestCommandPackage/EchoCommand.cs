@@ -10,7 +10,7 @@ using Xcaciv.Command.Interface.Attributes;
 
 namespace zTestCommandPackage
 {
-    [CommandRegister("ECHO", "ECHO")]
+    [CommandRegister("ECHO", "test command to output each parameter as a chunk")]
     public class EchoCommand : ICommandDelegate
     {
         public string Command => "ECHO";

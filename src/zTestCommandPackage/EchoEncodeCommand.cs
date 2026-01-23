@@ -1,4 +1,4 @@
-﻿ using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection.Metadata.Ecma335;
@@ -9,7 +9,7 @@ using Xcaciv.Command.Interface.Attributes;
 
 namespace zTestCommandPackage
 {
-    [CommandRegister("ECHOE", "ECHO Encoded")]
+    [CommandRegister("ECHOE", "test command that echoes in base64 encoding")]
     public class EchoEncodeCommand : EchoCommand, ICommandDelegate
     {
         public EchoEncodeCommand()
