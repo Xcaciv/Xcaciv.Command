@@ -119,9 +119,36 @@ public class CommandExecutor : ICommandExecutor
             var commandKey = NamesValidator.GetValidCommandName(command);
             if (_registry.TryGetCommand(commandKey, out var description) && description != null)
             {
-                var commandInstance = _commandFactory.CreateCommand(description, context);
-                var helpText = _helpService.BuildHelp(commandInstance, context.Parameters, env);
-                await context.OutputChunk(CommandResult<string>.Success(helpText)).ConfigureAwait(false);
+                // Check if this is a root command (has subcommands but no actual type)
+                if (description.SubCommands.Count > 0 && string.IsNullOrEmpty(description.FullTypeName))
+                {
+                    // This is a root command - show the root description and all subcommands
+                    var firstSubCommand = description.SubCommands.First().Value;
+                    var commandInstance = _commandFactory.CreateCommand(firstSubCommand, context);
+                    var commandType = commandInstance.GetType();
+
+                    if (Attribute.GetCustomAttribute(commandType, typeof(CommandRootAttribute)) is CommandRootAttribute rootAttribute)
+                    {
+                        await context.OutputChunk(CommandResult<string>.Success($"{description.BaseCommand}:")).ConfigureAwait(false);
+                        await context.OutputChunk(CommandResult<string>.Success($"  {rootAttribute.Description}")).ConfigureAwait(false);
+                        await context.OutputChunk(CommandResult<string>.Success(string.Empty)).ConfigureAwait(false);
+                        await context.OutputChunk(CommandResult<string>.Success("Sub-commands:")).ConfigureAwait(false);
+                    }
+
+                    // Show all subcommands
+                    foreach (var subCommand in description.SubCommands.Values)
+                    {
+                        var subHelpLine = _helpService.BuildOneLineHelp(subCommand);
+                        await context.OutputChunk(CommandResult<string>.Success(subHelpLine)).ConfigureAwait(false);
+                    }
+                }
+                else
+                {
+                    // Regular command with a type - show detailed help
+                    var commandInstance = _commandFactory.CreateCommand(description, context);
+                    var helpText = _helpService.BuildHelp(commandInstance, context.Parameters, env);
+                    await context.OutputChunk(CommandResult<string>.Success(helpText)).ConfigureAwait(false);
+                }
             }
             else
             {
