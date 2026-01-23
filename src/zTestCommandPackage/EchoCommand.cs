@@ -13,9 +13,21 @@ namespace zTestCommandPackage
     [CommandRegister("ECHO", "ECHO")]
     public class EchoCommand : ICommandDelegate
     {
+        public string Command => "ECHO";
+        public string RootCommand => string.Empty;
         public string BaseCommand { get; protected set; } = "ECHO";
 
         public string FriendlyName { get; protected set; } = "echo";
+
+        public Dictionary<string, string> GetDefaultEnvironment()
+        {
+            return new Dictionary<string, string>();
+        }
+
+        public List<ICommandParameter> GetParameters()
+        {
+            return new List<ICommandParameter>();
+        }
 
         public string Help(string[] parameters, IEnvironmentContext evn)
         {

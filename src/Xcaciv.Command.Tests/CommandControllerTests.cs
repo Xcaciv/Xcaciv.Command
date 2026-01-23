@@ -38,7 +38,7 @@ namespace Xcaciv.Command.Tests
             controller.AddPackageDirectory(commandPackageDir);
 
             controller.LoadCommands(string.Empty);
-            var env = new EnvironmentContext();
+            var env = new ControllerEnvironmentContext();
             var textio = new TestImpementations.TestTextIo();
             // simulate user input
             await controller.Run("echo what is up", textio, env);
@@ -54,7 +54,7 @@ namespace Xcaciv.Command.Tests
             controller.AddPackageDirectory(commandPackageDir);
 
             controller.LoadCommands(string.Empty);
-            var env = new EnvironmentContext();
+            var env = new ControllerEnvironmentContext();
             var textio = new TestImpementations.TestTextIo();
             // simulate user input
             await controller.Run("do echo what is up", textio, env);
@@ -70,7 +70,7 @@ namespace Xcaciv.Command.Tests
             controller.AddPackageDirectory(commandPackageDir);
 
             controller.LoadCommands(string.Empty);
-            var env = new EnvironmentContext();
+            var env = new ControllerEnvironmentContext();
             var textio = new TestImpementations.TestTextIo();
             // simulate user input
             await controller.Run("echo what is up | echo2 | echoe ", textio, env);
@@ -99,9 +99,9 @@ namespace Xcaciv.Command.Tests
             controller.AddCommand("internal", new InstallCommand());
             controller.RegisterBuiltInCommands();
 
-            var env = new EnvironmentContext();
+            var env = new ControllerEnvironmentContext();
             var textio = new TestImpementations.TestTextIo();
-            await controller.GetHelpAsync(string.Empty, textio, env);
+            await controller.Run("HELP", textio, env);
 
             var output = textio.ToString();
 
@@ -117,8 +117,8 @@ namespace Xcaciv.Command.Tests
             controller.RegisterBuiltInCommands();
 
             var textio = new TestImpementations.TestTextIo();
-            var env = new EnvironmentContext();
-            await controller.GetHelpAsync(string.Empty, textio, env);
+            var env = new ControllerEnvironmentContext();
+            await controller.Run("HELP", textio, env);
 
             var output = textio.ToString();
 
@@ -135,8 +135,8 @@ namespace Xcaciv.Command.Tests
             controller.LoadCommands(string.Empty);
 
             var textio = new TestImpementations.TestTextIo();
-            var env = new EnvironmentContext();
-            await controller.GetHelpAsync(string.Empty, textio, env);
+            var env = new ControllerEnvironmentContext();
+            await controller.Run("HELP", textio, env);
             var output = textio.ToString();
 
             Assert.Contains("SUB DO echo", output);
@@ -150,7 +150,7 @@ namespace Xcaciv.Command.Tests
             controller.LoadCommands(string.Empty);
 
             var textio = new TestImpementations.TestTextIo();
-            var env = new EnvironmentContext();
+            var env = new ControllerEnvironmentContext();
             await controller.Run("echo --help", textio, env);
 
             var output = textio.GatherChildOutput();
@@ -166,7 +166,7 @@ namespace Xcaciv.Command.Tests
             controller.LoadCommands(string.Empty);
 
             var textio = new TestImpementations.TestTextIo();
-            var env = new EnvironmentContext();
+            var env = new ControllerEnvironmentContext();
             await controller.Run("do say --help", textio, env);
             var output = textio.GatherChildOutput();
 

@@ -15,9 +15,21 @@ namespace zTestCommandPackage
     [CommandParameterNamed("optional", "option", AllowedValues = ["1", "2"])]
     public class PingCommand : ICommandDelegate
     {
+        public string Command => "PING";
+        public string RootCommand => string.Empty;
         public string BaseCommand { get; protected set; } = "ECHO";
 
         public string FriendlyName { get; protected set; } = "echo";
+
+        public Dictionary<string, string> GetDefaultEnvironment()
+        {
+            return new Dictionary<string, string>();
+        }
+
+        public List<ICommandParameter> GetParameters()
+        {
+            return new List<ICommandParameter>();
+        }
 
         public string Help(string[] parameters, IEnvironmentContext evn)
         {

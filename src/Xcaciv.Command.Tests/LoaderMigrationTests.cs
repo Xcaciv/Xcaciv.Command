@@ -52,7 +52,7 @@ namespace Xcaciv.Command.Tests
             var controller = new CommandController(new Crawler(), @"..\..\..\..\..");
             controller.AddPackageDirectory(commandPackageDir);
             controller.LoadCommands(string.Empty);
-            var env = new EnvironmentContext();
+            var env = new ControllerEnvironmentContext();
             var textio = new TestTextIo();
 
             // Act
@@ -104,7 +104,7 @@ namespace Xcaciv.Command.Tests
             var controller = new CommandController(new Crawler(), @"..\..\..\..\..");
             controller.AddPackageDirectory(commandPackageDir);
             controller.LoadCommands(string.Empty);
-            var env = new EnvironmentContext();
+            var env = new ControllerEnvironmentContext();
             var textio = new TestTextIo();
 
             // Act - Execute a command that requires plugin loading
@@ -124,7 +124,7 @@ namespace Xcaciv.Command.Tests
             var controller = new CommandController(new Crawler(), @"..\..\..\..\..");
             controller.AddPackageDirectory(commandPackageDir);
             controller.LoadCommands(string.Empty);
-            var env = new EnvironmentContext();
+            var env = new ControllerEnvironmentContext();
             var textio = new TestTextIo();
 
             // Act - Execute a sub-command
@@ -148,9 +148,9 @@ namespace Xcaciv.Command.Tests
             controller.RegisterBuiltInCommands();
 
             // Assert - Both plugin and default commands should be loaded
-            var env = new EnvironmentContext();
+            var env = new ControllerEnvironmentContext();
             var textio = new TestTextIo();
-            await controller.GetHelpAsync(string.Empty, textio, env);
+            await controller.Run("HELP", textio, env);
             var output = textio.ToString();
 
             Assert.Contains("ECHO", output); // Plugin command

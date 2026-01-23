@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
+using System.Linq;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using Xcaciv.Command;
