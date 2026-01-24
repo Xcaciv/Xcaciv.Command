@@ -31,11 +31,6 @@ namespace zTestCommandPackage
             return new List<ICommandParameter>();
         }
 
-        public string Help(string[] parameters, IEnvironmentContext evn)
-        {
-            return $"[{BaseCommand}] ({FriendlyName}) - test command to output each parameter as a chunk";
-        }
-
         public async IAsyncEnumerable<IResult<string>> Main(IIoContext io, IEnvironmentContext statusContext)
         {
             await io.AddTraceMessage($"{this.BaseCommand} test start");
@@ -52,10 +47,6 @@ namespace zTestCommandPackage
                         yield return pipedResult;
                     }
                 }
-            }
-            else if (io.Parameters.Length > 0 && io.Parameters[0].Equals("--HELP", StringComparison.CurrentCultureIgnoreCase))
-            {
-                yield return CommandResult<string>.Success(this.Help(io.Parameters, statusContext));
             }
             else
             {
@@ -78,9 +69,5 @@ namespace zTestCommandPackage
             return ValueTask.CompletedTask;
         }
 
-        public string OneLineHelp(string[] paramseters)
-        {
-            return $"{BaseCommand} - {FriendlyName}";
-        }
     }
 }

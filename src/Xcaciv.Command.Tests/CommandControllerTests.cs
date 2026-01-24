@@ -72,6 +72,8 @@ namespace Xcaciv.Command.Tests
             controller.LoadCommands(string.Empty);
             var env = new ControllerEnvironmentContext();
             var textio = new TestImpementations.TestTextIo();
+            textio.Verbose = true; // Enable trace output to see what's happening
+            
             // simulate user input
             await controller.Run("echo what is up | echo2 | echoe ", textio, env);
 

@@ -147,6 +147,24 @@ public class Crawler : ICrawler
                 Trace.WriteLine($"[Xcaciv.Loader] Invalid assembly format for package [{key}] at [{binPath}]: {ex.Message}");
                 return;
             }
+            catch (System.Reflection.ReflectionTypeLoadException ex)
+            {
+                // Xcaciv.Loader: Handle type loading failures (e.g., version mismatches, missing dependencies)
+                var loaderMessages = ex.LoaderExceptions?
+                    .Where(le => le != null)
+                    .Select(le => le!.Message)
+                    .Distinct()
+                    .ToList() ?? new List<string>();
+                
+                var detailMessage = loaderMessages.Any() 
+                    ? string.Join("; ", loaderMessages)
+                    : "No detailed loader exception information available";
+                
+                Trace.WriteLine($"[Xcaciv.Loader] Type load failure for package [{key}] at [{binPath}]: " +
+                    $"Unable to load one or more types. This typically indicates the plugin was compiled against " +
+                    $"a different version of the interface assemblies. Details: {detailMessage}");
+                return; // Skip this package due to type load failure
+            }
             catch (Exception ex)
             {
                 Trace.WriteLine($"[Xcaciv.Loader] Unexpected error loading package [{key}] from [{binPath}]: {ex.GetType().Name}: {ex.Message}");

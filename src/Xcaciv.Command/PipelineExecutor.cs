@@ -85,6 +85,7 @@ public class PipelineExecutor : IPipelineExecutor
             var commandName = NamesValidator.GetValidCommandName(command).ToString();
             var args = NamesValidator.GetArgumentsFromCommandline(command);
             var childIoContext = await ioContext.GetChild().ConfigureAwait(false);
+            await childIoContext.SetParameters(args).ConfigureAwait(false);
 
             // Set pipeline stage metadata for audit logging
             childIoContext.SetPipelineStage(currentStage, totalStages);

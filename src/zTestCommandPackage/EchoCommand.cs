@@ -79,9 +79,5 @@ namespace zTestCommandPackage
             return ValueTask.CompletedTask;
         }
 
-        public string OneLineHelp(string[] paramseters)
-        {
-            return $"{BaseCommand} - {FriendlyName}";
-        }
     }
 }
