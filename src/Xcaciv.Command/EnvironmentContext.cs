@@ -15,7 +15,7 @@ namespace Xcaciv.Command
         /// Thread safe collection of env vars
         /// MUST be set when creating a child!
         /// </summary>
-        protected ConcurrentDictionary<string, string> EnvironmentVariables { get; set; } = new ConcurrentDictionary<string, string>();
+        protected ConcurrentDictionary<string, string> EnvironmentVariables { get; set; } = new ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
         /// Optional audit logger for environment variable changes

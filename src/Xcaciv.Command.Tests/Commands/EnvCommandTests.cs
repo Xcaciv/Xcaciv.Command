@@ -211,7 +211,7 @@ namespace Xcaciv.Command.Tests.Commands
 
             // Act
             await controller.Run("ENV", textIo, env);
-            var output = textIo.GatherChildOutput();
+            var output = textIo.ToString();
 
             // Assert - variables should be present
             Assert.Contains("1", output);
@@ -233,7 +233,7 @@ namespace Xcaciv.Command.Tests.Commands
             await controller.Run("SET var2 value2", textIo, env);
             textIo = new TestTextIo(); // Reset for clean output
             await controller.Run("ENV", textIo, env);
-            var output = textIo.GatherChildOutput();
+            var output = textIo.ToString();
 
             // Assert
             Assert.Contains("value1", output);

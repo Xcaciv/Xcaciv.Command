@@ -259,6 +259,12 @@ public class CommandController : Interface.ICommandController
 
             var childEnv = await env.GetChild().ConfigureAwait(false);
             await ExecuteCommandInternal(commandName, ioContext, childEnv, cancellationToken).ConfigureAwait(false);
+            
+            // Propagate child environment changes back to parent only if command is authorized to modify environment
+            if (childEnv.HasChanged && _commandRegistry.TryGetCommand(commandName, out var commandDesc) && commandDesc?.ModifiesEnvironment == true)
+            {
+                env.UpdateEnvironment(childEnv.GetEnvironment(), string.Empty);
+            }
         }
     }
 
