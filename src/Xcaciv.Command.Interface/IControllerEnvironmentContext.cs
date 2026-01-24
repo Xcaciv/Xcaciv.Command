@@ -22,7 +22,7 @@ namespace Xcaciv.Command.Interface
     /// A command cannot modify the parent environment unless explicitly allowed
     /// via the ModifiesEnvironment flag on its CommandDescription.
     /// </remarks>
-    public interface IControllerEnvironmentContext : ICommandContext<IEnvironmentContext>
+    public interface IControllerEnvironmentContext : ICommandContext<IControllerEnvironmentContext>
     {
         /// <summary>
         /// Sets an environment variable to the specified value.
@@ -35,6 +35,23 @@ namespace Xcaciv.Command.Interface
         /// If an audit logger is configured, the change is logged.
         /// </remarks>
         void SetValue(string key, string value, string commandName);
+
+        /// <summary>
+        /// create a child environment context
+        /// </summary>
+        /// <param name="commandName">index for values</param>
+        /// <returns>IEnvironmentContext for command</returns>
+        Task<IEnvironmentContext> GetChild(string commandName);
+
+        /// <summary>
+        /// Retrieves all environment variables as a dictionary.
+        /// </summary>
+        /// <returns>A new dictionary containing all current environment variables.</returns>
+        /// <remarks>
+        /// Returns a snapshot of the current environment. Modifications to the returned
+        /// dictionary do not affect the environment context; use SetValue() to modify variables.
+        /// </remarks>
+        Dictionary<string, string> GetEnvironment();
 
         /// <summary>
         /// Retrieves all environment variables as a dictionary.
@@ -66,6 +83,17 @@ namespace Xcaciv.Command.Interface
         /// Overwrites any existing variables with matching keys.
         /// </remarks>
         void UpdateEnvironment(Dictionary<string, string> dictionary, string commandName);
+
+        /// <summary>
+        /// Synchronizes environment variables from another environment or dictionary.
+        /// </summary>
+        /// <param name="dictionary">The dictionary of variables to merge into this context.</param>
+        /// <remarks>
+        /// Used by the framework to update the parent environment after a command
+        /// execution (if the command has ModifiesEnvironment=true).
+        /// Overwrites any existing variables with matching keys.
+        /// </remarks>
+        void UpdateEnvironment(Dictionary<string, string> dictionary);
 
         /// <summary>
         /// Set the audit logger for this environment context

@@ -19,7 +19,14 @@ namespace Xcaciv.Command
         /// </summary>
         protected IEnvironmentContext _environment { get; set; } = new EnvironmentContext();
 
-        public bool HasChanged { get; set; }
+        public bool HasChanged 
+        { 
+            get
+            {
+                return field || _environment.HasChanged;
+            }
+            set; 
+        }
 
         public Guid Id { get; } = Guid.NewGuid();
 
@@ -34,17 +41,35 @@ namespace Xcaciv.Command
             _environment = environment;
         }
 
+
+        public ControllerEnvironmentContext(IEnvironmentContext environment, ConcurrentDictionary<string, ConcurrentDictionary<string, string>> commandEnvironment)
+        {
+            _environment = environment;
+            _commandEnvironment = commandEnvironment;
+        }
+
         public ValueTask DisposeAsync()
         {
             return ValueTask.CompletedTask;
         }
 
-        public async Task<IEnvironmentContext> GetChild()
+        public async Task<IControllerEnvironmentContext> GetChild()
         {
-            var child = await _environment.GetChild().ConfigureAwait(false);
-            return child;
+            var childEnv = await _environment.GetChild().ConfigureAwait(false);
+            var childCommandEnv = new ConcurrentDictionary<string, ConcurrentDictionary<string, string>>(_commandEnvironment, StringComparer.OrdinalIgnoreCase);
+            return new ControllerEnvironmentContext(childEnv, childCommandEnv);
         }
 
+        public async Task<IEnvironmentContext> GetChild(string commandName)
+        {
+            var child = await _environment.GetChild().ConfigureAwait(false);
+            child.UpdateEnvironment(GetEnvironment(commandName));
+            return child;
+        }
+        public Dictionary<string, string> GetEnvironment()
+        {
+            return this._environment.GetEnvironment();
+        }
         public Dictionary<string, string> GetEnvironment(string commandName)
         {
             if (String.IsNullOrEmpty(commandName))
@@ -82,9 +107,13 @@ namespace Xcaciv.Command
                     Trace.WriteLine($"CommandEnvironment [{commandName}] value {key} changed from {value} to {addValue}.");
                     return addValue;
                 });
+                HasChanged = true;
             }
         }
-
+        public void UpdateEnvironment(Dictionary<string, string> dictionary)
+        {
+            _environment.UpdateEnvironment(dictionary);
+        }
         public void UpdateEnvironment(Dictionary<string, string> dictionary, string commandName)
         {
             if (String.IsNullOrEmpty(commandName))
@@ -104,6 +133,7 @@ namespace Xcaciv.Command
                         return addValue;
                     });
                 }
+                HasChanged = true;
             }
         }
 

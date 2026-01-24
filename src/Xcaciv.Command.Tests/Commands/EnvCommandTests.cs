@@ -28,7 +28,7 @@ namespace Xcaciv.Command.Tests.Commands
 
             // Act
             await controller.Run("ENV", textIo, env);
-            var output = textIo.GatherChildOutput();
+            var output = textIo.ToString();
 
             // Assert
             Assert.Contains("VAR1 = value1", output);
@@ -47,7 +47,7 @@ namespace Xcaciv.Command.Tests.Commands
 
             // Act
             await controller.Run("ENV", textIo, env);
-            var output = textIo.GatherChildOutput().Trim();
+            var output = textIo.ToString().Trim();
 
             // Assert - should be empty or just whitespace
             Assert.True(string.IsNullOrWhiteSpace(output));
@@ -66,7 +66,7 @@ namespace Xcaciv.Command.Tests.Commands
 
             // Act
             await controller.Run("ENV", textIo, env);
-            var output = textIo.GatherChildOutput();
+            var output = textIo.ToString();
 
             // Assert - check format is "KEY = VALUE"
             Assert.Contains("USER = john_doe", output);
@@ -87,7 +87,7 @@ namespace Xcaciv.Command.Tests.Commands
             await controller.Run("SET myvar testvalue", textIo, env);
             textIo = new TestTextIo(); // Reset IO for clean output
             await controller.Run("ENV", textIo, env);
-            var output = textIo.GatherChildOutput();
+            var output = textIo.ToString();
 
             // Assert - Note: EnvironmentContext stores keys as-is, so check actual stored key
             Assert.Contains("testvalue", output);
@@ -106,7 +106,7 @@ namespace Xcaciv.Command.Tests.Commands
 
             // Act
             await controller.Run("ENV", textIo, env);
-            var output = textIo.GatherChildOutput();
+            var output = textIo.ToString();
 
             // Assert
             Assert.Contains("/usr/bin:/usr/local/bin", output);
@@ -190,7 +190,7 @@ namespace Xcaciv.Command.Tests.Commands
 
             // Act
             await controller.Run("ENV --help", textIo, env);
-            var helpText = textIo.GatherChildOutput();
+            var helpText = textIo.ToString();
 
             // Assert
             Assert.Contains("ENV", helpText);
@@ -254,7 +254,7 @@ namespace Xcaciv.Command.Tests.Commands
             await controller.Run("SET status updated", textIo, env);
             textIo = new TestTextIo();
             await controller.Run("ENV", textIo, env);
-            var output = textIo.GatherChildOutput();
+            var output = textIo.ToString();
 
             // Assert - should show the updated value
             Assert.Contains("updated", output);

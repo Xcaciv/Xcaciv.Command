@@ -13,6 +13,7 @@ public interface IPipelineExecutor
     /// Gets or sets the configuration applied when orchestrating pipeline execution.
     /// </summary>
     PipelineConfiguration Configuration { get; set; }
+    string LastStageCommand { get; }
 
     /// <summary>
     /// Executes a pipeline string by invoking the supplied command delegate for each stage.
@@ -22,10 +23,10 @@ public interface IPipelineExecutor
     /// <param name="environmentContext">Shared environment context.</param>
     /// <param name="executeCommand">Delegate that runs a single command.</param>
     Task ExecuteAsync(
-        string commandLine,
-        IIoContext ioContext,
-        IControllerEnvironmentContext environmentContext,
-        Func<string, IIoContext, IEnvironmentContext, Task> executeCommand);
+    string commandLine,
+    IIoContext ioContext,
+    IControllerEnvironmentContext environmentContext,
+    Func<string, IIoContext, IEnvironmentContext, Task> executeCommand);
 
     /// <summary>
     /// Executes a pipeline with cancellation support.

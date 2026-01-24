@@ -232,9 +232,9 @@ public class CommandController : Interface.ICommandController
         await Run(commandLine, ioContext, controllerEnv, cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task Run(string commandLine, IIoContext ioContext, IControllerEnvironmentContext env, CancellationToken cancellationToken)
+    public async Task Run(string commandText, IIoContext ioContext, IControllerEnvironmentContext env, CancellationToken cancellationToken)
     {
-        if (commandLine == null) throw new ArgumentNullException(nameof(commandLine));
+        if (commandText == null) throw new ArgumentNullException(nameof(commandText));
         if (ioContext == null) throw new ArgumentNullException(nameof(ioContext));
         if (env == null) throw new ArgumentNullException(nameof(env));
 
@@ -247,23 +247,29 @@ public class CommandController : Interface.ICommandController
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (commandLine.IndexOf(CommandSyntax.PipelineDelimiter) >= 0)
+        if (commandText.IndexOf(CommandSyntax.PipelineDelimiter) >= 0)
         {
-            await _pipelineExecutor.ExecuteAsync(commandLine, ioContext, env, ExecuteCommandInternal, cancellationToken).ConfigureAwait(false);
+            var controllerEnvironmentChild = await env.GetChild();
+            await _pipelineExecutor.ExecuteAsync(commandText, ioContext, controllerEnvironmentChild, ExecuteCommandInternal, cancellationToken).ConfigureAwait(false);
+            var lastCommandName = _pipelineExecutor.LastStageCommand;
+
+            if (controllerEnvironmentChild.HasChanged && _commandRegistry.TryGetCommand(lastCommandName, out var commandDesc) && commandDesc?.ModifiesEnvironment == true)
+            {
+                env.UpdateEnvironment(controllerEnvironmentChild.GetEnvironment());
+                env.UpdateEnvironment(controllerEnvironmentChild.GetEnvironment(lastCommandName), lastCommandName);
+            }
         }
         else
         {
-            var commandName = NamesValidator.GetValidCommandName(commandLine);
-            var args = NamesValidator.GetArgumentsFromCommandline(commandLine);
+            var commandName = NamesValidator.GetValidCommandName(commandText);
+            var args = NamesValidator.GetArgumentsFromCommandline(commandText);
             await ioContext.SetParameters([.. args]).ConfigureAwait(false);
 
-            var childEnv = await env.GetChild().ConfigureAwait(false);
+            var childEnv = await env.GetChild(commandName).ConfigureAwait(false);
             await ExecuteCommandInternal(commandName, ioContext, childEnv, cancellationToken).ConfigureAwait(false);
-            
-            // Propagate child environment changes back to parent only if command is authorized to modify environment
             if (childEnv.HasChanged && _commandRegistry.TryGetCommand(commandName, out var commandDesc) && commandDesc?.ModifiesEnvironment == true)
             {
-                env.UpdateEnvironment(childEnv.GetEnvironment(), string.Empty);
+                env.UpdateEnvironment(childEnv.GetEnvironment(), commandName);
             }
         }
     }
