@@ -94,21 +94,26 @@ namespace Xcaciv.Command
             if (String.IsNullOrEmpty(commandName))
             {
                 _environment.SetValue(key, addValue);
+                return;
             }
-            else
-            {
-                string? oldValue = null;
 
-                // update CommandEnvironment with the key commandEnvKey, sub-dictionary key of 'key' trace the change
-                var commandEnv = _commandEnvironment.GetOrAdd(commandName, new ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase));
-                commandEnv.AddOrUpdate(key, addValue, (key, value) =>
-                {
-                    oldValue = value;
-                    Trace.WriteLine($"CommandEnvironment [{commandName}] value {key} changed from {value} to {addValue}.");
-                    return addValue;
-                });
-                HasChanged = true;
+            var commandPrefix = string.Concat(commandName, "_");
+            if (!key.StartsWith(commandPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                _environment.SetValue(key, addValue);
+                return;
             }
+
+            string? oldValue = null;
+
+            var commandEnvironment = _commandEnvironment.GetOrAdd(commandName, new ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase));
+            commandEnvironment.AddOrUpdate(key, addValue, (commandKey, existingValue) =>
+            {
+                oldValue = existingValue;
+                Trace.WriteLine($"CommandEnvironment [{commandName}] value {commandKey} changed from {existingValue} to {addValue}.");
+                return addValue;
+            });
+            HasChanged = true;
         }
         public void UpdateEnvironment(Dictionary<string, string> dictionary)
         {
@@ -119,20 +124,40 @@ namespace Xcaciv.Command
             if (String.IsNullOrEmpty(commandName))
             {
                 _environment.UpdateEnvironment(dictionary);
+                return;
             }
-            else
+
+            var commandPrefix = string.Concat(commandName, "_");
+            var sharedEnvironmentUpdates = new Dictionary<string, string>();
+            var commandEnvironment = _commandEnvironment.GetOrAdd(commandName, new ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase));
+            var commandEnvironmentUpdated = false;
+
+            foreach ((var key, var addValue) in dictionary)
             {
-                var commandEnv = _commandEnvironment.GetOrAdd(commandName, new ConcurrentDictionary<string, string>());
-                foreach ((var key, var addValue) in dictionary)
+                if (key.StartsWith(commandPrefix, StringComparison.OrdinalIgnoreCase))
                 {
                     string? oldValue = null;
-                    commandEnv.AddOrUpdate(key, addValue, (key, value) =>
+                    commandEnvironment.AddOrUpdate(key, addValue, (environmentKey, existingValue) =>
                     {
-                        oldValue = value;
-                        Trace.WriteLine($"CommandEnvironment [{commandName}] value {key} changed from {value} to {addValue}.");
+                        oldValue = existingValue;
+                        Trace.WriteLine($"CommandEnvironment [{commandName}] value {environmentKey} changed from {existingValue} to {addValue}.");
                         return addValue;
                     });
+                    commandEnvironmentUpdated = true;
                 }
+                else
+                {
+                    sharedEnvironmentUpdates[key] = addValue;
+                }
+            }
+
+            if (sharedEnvironmentUpdates.Count > 0)
+            {
+                _environment.UpdateEnvironment(sharedEnvironmentUpdates);
+            }
+
+            if (commandEnvironmentUpdated)
+            {
                 HasChanged = true;
             }
         }
