@@ -20,21 +20,32 @@ Create a file `GreetCommand.cs`:
 using Xcaciv.Command.Core;
 using Xcaciv.Command.Interface;
 using Xcaciv.Command.Interface.Attributes;
+using Xcaciv.Command.Interface.Parameters;
 
 [CommandRegister("GREET", "Greet someone")]
+[CommandParameterOrdered(0, "name", "Person's name")]
 public class GreetCommand : AbstractCommand
 {
-    [CommandParameterOrdered("name", "Person's name")]
-    public string Name { get; set; }
-
-    public override string HandleExecution(string[] parameters, IEnvironmentContext env)
+    public override IResult<string> HandleExecution(
+        Dictionary<string, IParameterValue> parameters,
+        IEnvironmentContext env)
     {
-        return $"Hello, {Name}!";
+        var name = parameters["name"].GetValue<string>();
+        return CommandResult<string>.Success($"Hello, {name}!");
     }
 
-    public override string HandlePipedChunk(string pipedChunk, string[] parameters, IEnvironmentContext env)
+    public override IResult<string> HandlePipedChunk(
+        IResult<string> pipedChunk,
+        Dictionary<string, IParameterValue> parameters,
+        IEnvironmentContext env)
     {
-        return $"Hello, {pipedChunk}!";
+        if (!pipedChunk.IsSuccess)
+        {
+            return pipedChunk;
+        }
+
+        var input = pipedChunk.Output ?? string.Empty;
+        return CommandResult<string>.Success($"Hello, {input}!");
     }
 }
 ```
@@ -48,63 +59,40 @@ using Xcaciv.Command;
 using Xcaciv.Command.Interface;
 
 var controller = new CommandController();
-controller.EnableDefaultCommands(); // Enable built-in commands
-controller.AddCommand("MyApp", typeof(GreetCommand));
+controller.RegisterBuiltInCommands();
+controller.AddCommand("Samples", typeof(GreetCommand));
 
-var ioContext = new ConsoleIoContext();
-var env = new EnvironmentContext();
+var ioContext = new MemoryIoContext();
+var env = new ControllerEnvironmentContext();
 
-string commandLine;
-while ((commandLine = await ioContext.PromptForCommand("xcaciv> ")) != null)
+while (true)
 {
-    try
-    {
-        await controller.Run(commandLine, ioContext, env);
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"Error: {ex.Message}");
-    }
+    var commandLine = await ioContext.PromptForCommand("xcaciv> ");
+    if (string.IsNullOrWhiteSpace(commandLine)) break;
+
+    await controller.Run(commandLine, ioContext, env);
 }
 ```
 
-## 4. Test Your Command
+## 4. Try It
 
-Build and run:
+Run and execute:
 
-```bash
-dotnet build
-dotnet run
-```
-
-Try these commands:
-
-```
+```shell
 xcaciv> GREET Alice
 Hello, Alice!
-
-xcaciv> GREET Bob
-Hello, Bob!
 
 xcaciv> SAY World | GREET
 Hello, World!
 
 xcaciv> HELP GREET
-GREET:
-  Greet someone
-
-Usage:
-  GREET <name>
-
-Options:
-  name - Person's name
 ```
 
 ## 5. Load Plugins
 
 Create a plugin directory structure:
 
-```
+```shell
 /plugins/
   MyPlugin/
     bin/
@@ -116,11 +104,9 @@ Update your application:
 
 ```csharp
 var controller = new CommandController();
-controller.EnableDefaultCommands();
+controller.RegisterBuiltInCommands();
 controller.AddPackageDirectory("/plugins");
 controller.LoadCommands();
-
-// ... rest of code
 ```
 
 ## 6. Create a Pipeline
@@ -128,11 +114,7 @@ controller.LoadCommands();
 Commands can be chained with `|`:
 
 ```csharp
-// From console
-xcaciv> SAY line1 | SAY line2 | REGIF line1
-
-// From code
-await controller.Run("SAY Hello | UPPERCASE", ioContext, env);
+await controller.Run("SAY Hello | REGIF ^Hello", ioContext, env);
 ```
 
 ## Built-in Commands
@@ -151,30 +133,38 @@ await controller.Run("SAY Hello | UPPERCASE", ioContext, env);
 
 ```csharp
 [CommandRegister("SEND", "Send a message")]
+[CommandParameterOrdered(0, "to", "Recipient")]
+[CommandParameterOrdered(1, "message", "Message text")]
+[CommandParameterNamed("subject", "Email subject")]
+[CommandFlag("urgent", "Mark as urgent")]
 public class SendCommand : AbstractCommand
 {
-    [CommandParameterOrdered("to", "Recipient")]
-    public string To { get; set; }
-
-    [CommandParameterOrdered("message", "Message text")]
-    public string Message { get; set; }
-
-    [CommandParameterNamed("subject", "Email subject")]
-    public string Subject { get; set; }
-
-    [CommandFlag("urgent", "Mark as urgent")]
-    public bool Urgent { get; set; }
-
-    public override string HandleExecution(string[] parameters, IEnvironmentContext env)
+    public override IResult<string> HandleExecution(
+        Dictionary<string, IParameterValue> parameters,
+        IEnvironmentContext env)
     {
-        var priority = Urgent ? "URGENT" : "normal";
-        return $"[{priority}] To: {To}, Subject: {Subject}, Message: {Message}";
+        var to = parameters["to"].GetValue<string>();
+        var message = parameters["message"].GetValue<string>();
+        var subject = parameters.TryGetValue("subject", out var s) && s.IsValid ? s.GetValue<string>() : string.Empty;
+        var urgent = parameters.TryGetValue("urgent", out var u) && u.IsValid && u.GetValue<bool>();
+
+        var priority = urgent ? "URGENT" : "normal";
+        return CommandResult<string>.Success($"[{priority}] To: {to}, Subject: {subject}, Message: {message}");
+    }
+
+    public override IResult<string> HandlePipedChunk(
+        IResult<string> pipedChunk,
+        Dictionary<string, IParameterValue> parameters,
+        IEnvironmentContext env)
+    {
+        return pipedChunk;
     }
 }
 ```
 
 Usage:
-```
+
+```shell
 xcaciv> SEND alice "Please review" --subject "Code Review" --urgent
 [URGENT] To: alice, Subject: Code Review, Message: Please review
 ```
@@ -186,23 +176,42 @@ xcaciv> SEND alice "Please review" --subject "Code Review" --urgent
 public class ReverseCommand : AbstractCommand
 {
     public override async IAsyncEnumerable<IResult<string>> Main(
-        IIoContext ioContext, 
+        IIoContext ioContext,
         IEnvironmentContext env)
     {
-        if (ioContext.HasPipedInput)
+        if (!ioContext.HasPipedInput)
         {
-            await foreach (var line in ioContext.ReadInputPipeChunks())
+            yield break;
+        }
+
+        await foreach (var chunk in ioContext.ReadInputPipeChunks())
+        {
+            if (!chunk.IsSuccess)
             {
-                var reversed = new string(line.Reverse().ToArray());
-                yield return CommandResult<string>.Success(reversed);
+                yield return chunk;
+                continue;
             }
+
+            var text = chunk.Output ?? string.Empty;
+            var reversed = new string(text.Reverse().ToArray());
+            yield return CommandResult<string>.Success(reversed);
         }
     }
+
+    public override IResult<string> HandleExecution(
+        Dictionary<string, IParameterValue> parameters,
+        IEnvironmentContext env) => CommandResult<string>.Success(string.Empty);
+
+    public override IResult<string> HandlePipedChunk(
+        IResult<string> pipedChunk,
+        Dictionary<string, IParameterValue> parameters,
+        IEnvironmentContext env) => pipedChunk;
 }
 ```
 
 Usage:
-```
+
+```shell
 xcaciv> SAY hello | REVERSE
 olleh
 ```
@@ -240,6 +249,7 @@ public class SetVarCommand : AbstractCommand
 ```
 
 Register with modification flag:
+
 ```csharp
 controller.AddCommand("MyApp", typeof(SetVarCommand), modifiesEnvironment: true);
 ```
@@ -308,7 +318,7 @@ controller.AddCommand("pkg", typeof(MyCommand)); // ? Register it
 
 **Solution:** Check directory structure
 
-```
+```shell
 /plugins/
   MyPlugin/
     bin/              ? LoadCommands() searches here by default

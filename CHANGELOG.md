@@ -5,6 +5,32 @@ All notable changes to Xcaciv.Command will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.0] - 2026-01-11
+
+### Changed
+
+- **Version bump:** All packages aligned to **3.3.0** (Command, Core, Interface, FileLoader, DependencyInjection, Extensions.Commandline).
+- **Documentation:** Quickstart, API interface reference, and examples updated to use `RegisterBuiltInCommands` and the v3.2.3+ `HandlePipedChunk(IResult<string>)` signature.
+- **Defaults:** Remains .NET 10 by default with optional `.NET 8` multi-targeting via `UseNet08`.
+
+## [3.2.4] - 2026-01-08
+
+### Changed
+
+- **Version bump:** All packages aligned to **3.2.4**.
+- **API cleanup:** Removed duplicate `AddCommand(string, ICommandDelegate, bool)` declaration from `ICommandController`.
+
+## [3.2.3] - 2026-01-07
+
+### Breaking
+
+- **HandlePipedChunk signature:** Now accepts `IResult<string>` instead of `string`, enabling downstream error propagation and access to result metadata.
+
+### Changed
+
+- **Version bump:** All packages aligned to **3.2.3** (Command, Core, Interface, FileLoader, DependencyInjection, Extensions.Commandline).
+- **Docs:** Added migration guide and updated templates/examples to use `pipedChunk.Output` and `pipedChunk.IsSuccess`.
+
 ## [3.2.2] - 2026-01-07
 
 ### Changed
