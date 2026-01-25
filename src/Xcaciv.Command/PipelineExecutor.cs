@@ -110,6 +110,10 @@ public class PipelineExecutor : IPipelineExecutor
 
             var childEnvironmentContext = await environmentContext.GetChild(commandName);
             tasks.Add(RunStageAsync(commandName, childIoContext, childEnvironmentContext, executeCommand, Configuration, cancellationToken));
+            if (childEnvironmentContext.HasChanged)
+            {
+                environmentContext.UpdateEnvironment(childEnvironmentContext.GetEnvironment(), commandName);
+            }
 
             // track last stage info for potential global reintegration
             LastStageCommand = commandName;

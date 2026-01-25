@@ -238,14 +238,11 @@ public class CommandController : Interface.ICommandController
         if (ioContext == null) throw new ArgumentNullException(nameof(ioContext));
         if (env == null) throw new ArgumentNullException(nameof(env));
 
-        if (env is ControllerEnvironmentContext envContext)
-        {
-            envContext.SetAuditLogger(_auditLogger);
-        }
+        cancellationToken.ThrowIfCancellationRequested();
+
+        env.SetAuditLogger(_auditLogger);
 
         ioContext.SetOutputEncoder(_outputEncoder);
-
-        cancellationToken.ThrowIfCancellationRequested();
 
         if (commandText.IndexOf(CommandSyntax.PipelineDelimiter) >= 0)
         {

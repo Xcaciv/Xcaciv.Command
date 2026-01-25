@@ -117,7 +117,7 @@ namespace Xcaciv.Command.Tests.TestImpementations
             return output;
         }
 
-        public string GatherChildOutput()
+        private string GatherChildOutput()
         {
             // combine output into one string separated by new lines
             // and then add the children output
