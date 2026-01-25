@@ -13,6 +13,12 @@ public interface IPipelineExecutor
     /// Gets or sets the configuration applied when orchestrating pipeline execution.
     /// </summary>
     PipelineConfiguration Configuration { get; set; }
+    /// <summary>
+    /// Gets the command that was executed in the final stage of the pipeline process.
+    /// </summary>
+    /// <remarks>This property can be used to track or audit the last command processed by the pipeline. It is
+    /// particularly useful in multi-stage workflows where understanding the final executed command is important for
+    /// diagnostics or logging.</remarks>
     string LastStageCommand { get; }
 
     /// <summary>

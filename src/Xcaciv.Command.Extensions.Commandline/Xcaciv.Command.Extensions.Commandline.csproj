@@ -4,7 +4,7 @@
     <TargetFrameworks>$(XcacivTargetFrameworks)</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <Version>3.2.6</Version>
+    <Version>3.3.0</Version>
     <IsPublishable>True</IsPublishable>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <AssemblyName>Xcaciv.Command.Extensions.Commandline</AssemblyName>
@@ -23,9 +23,9 @@
     <PackageReference Include="System.CommandLine" />
   </ItemGroup>
 
-	<ItemGroup>
-		<ProjectReference Include="..\Xcaciv.Command.Interface\Xcaciv.Command.Interface.csproj" />
-	</ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\Xcaciv.Command.Interface\Xcaciv.Command.Interface.csproj" />
+    </ItemGroup>
 
   <ItemGroup>
     <None Include="readme.md" Pack="True" PackagePath="readme.md" />
