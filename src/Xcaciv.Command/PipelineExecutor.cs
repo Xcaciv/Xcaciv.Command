@@ -85,7 +85,6 @@ public class PipelineExecutor : IPipelineExecutor
         var totalStages = commands.Length;
         var currentStage = 1;
 
-        IEnvironmentContext childEnvironmentContext;
         foreach (var command in commands)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -108,12 +107,12 @@ public class PipelineExecutor : IPipelineExecutor
                 FullMode = GetChannelFullMode(Configuration.BackpressureMode)
             });
             childIoContext.SetOutputPipe(pipeChannel.Writer);
-
-            childEnvironmentContext = await environmentContext.GetChild(commandName);
+                        
             tasks.Add(ExecuteStageAsync());
 
             async Task ExecuteStageAsync()
             {
+                var childEnvironmentContext = await environmentContext.GetChild(commandName);
                 await RunStageAsync(commandName, childIoContext, childEnvironmentContext, executeCommand, Configuration, cancellationToken).ConfigureAwait(false);
                 if (childEnvironmentContext.HasChanged)
                 {
@@ -184,7 +183,7 @@ public class PipelineExecutor : IPipelineExecutor
                         {
                             // Stage cancelled but no timeout configured - treat as error
                             await childContext.AddTraceMessage($"Pipeline stage cancelled unexpectedly: {commandName}").ConfigureAwait(false);
-                            await childContext.Complete($"Stage '{commandName}' was cancelled"). ConfigureAwait(false);
+                            await childContext.Complete($"Stage '{commandName}' was cancelled").ConfigureAwait(false);
                         }
                     }
                     else
