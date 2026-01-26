@@ -63,7 +63,16 @@ namespace Xcaciv.Command
         public async Task<IEnvironmentContext> GetChild(string commandName)
         {
             var child = await _environment.GetChild().ConfigureAwait(false);
-            child.UpdateEnvironment(GetEnvironment(commandName));
+            var commandEnv = GetEnvironment(commandName);
+
+            // apply command prfix to command keys
+            var commandPrefix = string.Concat(commandName, "_");
+            foreach (var (key, value) in commandEnv)
+            {
+                var newKey = key.StartsWith(commandPrefix, StringComparison.OrdinalIgnoreCase) ? key : commandPrefix + key;
+                child.SetValue(newKey, value);
+            }
+
             return child;
         }
         public Dictionary<string, string> GetEnvironment()
