@@ -87,14 +87,9 @@ namespace Xcaciv.Command
             }
             else
             {
-                if (_commandEnvironment.TryGetValue(commandName, out var commandEnv))
-                {
-                    return new Dictionary<string, string>(commandEnv);
-                }
-                else
-                {
-                    return new Dictionary<string, string>();
-                }
+                return _commandEnvironment.TryGetValue(commandName, out var commandEnv)
+                    ? new Dictionary<string, string>(commandEnv)
+                    : new Dictionary<string, string>();
             }
         }
 
