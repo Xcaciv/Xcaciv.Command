@@ -47,7 +47,7 @@ namespace Xcaciv.Command.Core
                     var registration = Attribute.GetCustomAttribute(thisType, typeof(CommandRootAttribute)) as CommandRootAttribute;
                     if (registration == null)
                     {
-                        throw new InvalidOperationException("CommandRegisterAttribute is required for all commands");
+                        throw new InvalidOperationException("CommandRootAttribute is required for all commands");
                     }
                     _rootCommand = registration.Command;
                 }
