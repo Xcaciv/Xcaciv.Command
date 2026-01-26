@@ -32,9 +32,9 @@ namespace Xcaciv.Command.Tests.TestImpementations
             this.Verbose = true;
         }
 
-        public override Task<IIoContext> GetChild(string[]? childParameters = null)
+        public override Task<IIoContext> GetChild()
         {
-            var child = new TestTextIo(childParameters)
+            var child = new TestTextIo(this.Parameters)
             {
                 Parent = Id
             };
@@ -117,7 +117,7 @@ namespace Xcaciv.Command.Tests.TestImpementations
             return output;
         }
 
-        public string GatherChildOutput()
+        private string GatherChildOutput()
         {
             // combine output into one string separated by new lines
             // and then add the children output

@@ -2,8 +2,8 @@
 
 The github repo is xcaciv/Xcaciv.Loader and the primary branch that I work off of is main.
 
-Never stub or mock functionality unless explicitly asked to do so.
-Your terminal is PowerShell, only use PowerShell syntax.
+Never stub or mock functionality unless explicitly asked to do so.  
+Your terminal is PowerShell, only use PowerShell syntax.  
 NEVER delete or remove content from task files. I will only update/mark completion status while preserving all existing text for future phases. Thank you for the correction.
 
 ## Formatting and Style
@@ -14,6 +14,7 @@ NEVER delete or remove content from task files. I will only update/mark completi
 
 ## Naming Conventions
 
+- Use `String` for object usage and only lowercase `string` for scalar value indications; stop lowercasing `String` when used as an object.
 - Never use single character variable names, always use descriptive names.
 - Never use the term "Helper" or "Utils" in class names. Use descriptive, intent-revealing names instead.
 - Examples:
@@ -28,9 +29,10 @@ This document includes guiding principles for .NET development, based on the **F
 The primary directive is to **"Resiliently add computing value."** This means generating code that is not only functional but also possesses intrinsic qualities that allow it to be maintained and secured over its lifecycle.
 
 ---
+
 # Exception handling
 
-Only the UI layer is allowed to catch general exceptions and log them. All other layers should only catch specific exceptions that they can handle or recover from or add context to.
+Only the UI layer is allowed to catch general exceptions and log them. All other layers should only catch specific exceptions that they can handle or recover from or add context to.  
 eg. `catch (FileNotFoundException ex) { throw new ConfigurationException("Config file missing", ex); }`
 
 Never use try/catch for flow control or to return a default value. Only use try/catch when an exception can be recovered from gracefully, when context needs to be added to an exception, when an exception needs to be logged. If you need to catch an exception and rethrow it, always add context. In the rare occasion that you cannot, use `throw;` instead of `throw ex;` to preserve the original stack trace.
@@ -63,8 +65,7 @@ The Derived Integrity Principle asserts that any value critical to a system’s 
 #### Canonical Input Handling
 
 Prefer the most narrow data types possible for input parameters. For example, use enums or booleans instead of strings where applicable.
-- Canonicalization/Normalization: Ensures that input data conforms to expected formats, types, lengths, and ranges before processing.
-Prevents unexpected or malicious data from entering the system.
+- Canonicalization/Normalization: Ensures that input data conforms to expected formats, types, lengths, and ranges before processing. Prevents unexpected or malicious data from entering the system.
 - Sanitization: Cleans input data to remove or neutralize potentially harmful content. Prevents malicious data from being executed or interpreted as code, protecting against injection attacks.
 - Validation: Checks that input data meets specific criteria before processing. Ensures that only valid and expected data is processed, reducing the risk of injection attacks or unexpected behavior. Always prefer allowing explicit values instead of rejecting unexpected values.
 
@@ -118,9 +119,8 @@ Transparency is the principle of designing a system so that its internal state a
 
 -   **Modularity:** Organize code into well-defined, independent modules or components. This improves maintainability and limits the change surface of security vulnerabilities.
 -   **Layering:** Adhere to architectural layering (e.g., presentation, business logic, data access). This enforces separation of concerns and helps in applying security controls at appropriate layers.
--   **Configuration Management:** Externalize configuration settings, especially security-sensitive ones. Use environment variables or windowsWindows Credential Manager stores instead of hardcoding values.
+-   **Configuration Management:** Externalize configuration settings, especially security-sensitive ones. Use environment variables or Windows Credential Manager stores instead of hardcoding values.
 -   **Dependency Management:** Regularly audit and update third-party libraries and frameworks to mitigate known vulnerabilities. Use tools to scan for vulnerable dependencies.
-
 
 ## Big picture
 - **What this repo is:** an extensible .NET command framework that discovers and runs command plugins (class library DLLs) and also ships a set of built-in commands.
@@ -151,32 +151,52 @@ Transparency is the principle of designing a system so that its internal state a
 - Command classes must implement `ICommandDelegate` (typically by inheriting `AbstractCommand`) and must be decorated with `CommandRegisterAttribute`. If the command is a root that contains sub-commands, also use `CommandRootAttribute`.
 - Use attribute-driven parameter definitions (ordered, named, flag, suffix). The controller expects ordered parameters to precede named parameters.
 - Help is triggered by `--HELP` (case-insensitive) or by calling controller `GetHelp`. `AbstractCommand.BuildHelpString` generates canonical help output; follow its format for consistency.
-- Only certain commands may modify environment. The controller tracks `ModifiesEnvironment` on `ICommandDescription`; when a command sets `ModifiesEnvironment` to true, the environment will be updated after command execution.
+- Only certain commands may modify the environment. The controller tracks `ModifiesEnvironment` on `ICommandDescription`; when a command sets `ModifiesEnvironment` to true, the environment will be updated after command execution.
 - When adding or modifying commands, ensure `CommandDescription.CreatePackageDescription` logic (see `CommandParameters.CreatePackageDescription`) stays compatible with the attribute semantics.
 
-## Typical developer workflows (concrete commands)
-- Build solution:
-  - PowerShell (from repo root):
-    ```powershell
-    dotnet build Xcaciv.Command.sln -c Debug
-    ```
-- Run all tests:
-  - PowerShell:
-    ```powershell
-    dotnet test Xcaciv.Command.sln --no-build
-    ```
-- Run a quick dev scenario (programmatic example found in `README.md`):
-  - Example usage to exercise built-ins from code:
-    ```csharp
-    var controller = new Xc.Command.CommandController();
-    controller.EnableDefaultCommands();
-    await controller.Run("Say Hello to my little friend", ioContext, env);
-    ```
-- Load external plugin packages at runtime (from `CommandController`):
+
+## Build and Test Workflow (Visual Studio, No PowerShell)
+
+When working in Visual Studio, always use the IDE’s native build and test pipeline instead of PowerShell or CLI commands.  
+Use GitHub Copilot Chat commands to trigger builds, generate tests, and run them through Test Explorer.
+
+### Core Commands
+
+- `@test #solution`  
+  Analyze the entire solution, generate missing tests, build the project, and run all tests.
+
+- `@test #<ClassName>`  
+  Generate and run tests for a specific class.  
+  Example: `@test #BankAccount`
+
+- `@test #changes`  
+  Generate tests only for recently modified code.
+
+### Expected Behavior
+
+Copilot should:
+1. Inspect the code and project structure.
+2. Create or update a test project (MSTest, NUnit, or xUnit).
+3. Trigger a **Visual Studio build** using MSBuild (not PowerShell).
+4. Run tests through **Test Explorer**.
+5. Iterate on failing tests by refining mocks, edge cases, and assumptions.
+
+### Guidelines for Copilot
+
+- Prefer Visual Studio’s built‑in build/test pipeline.  
+- Do **not** generate PowerShell scripts for build or test tasks.  
+- Do **not** call `dotnet build` or `dotnet test` unless explicitly requested.  
+- Use the `@test` command family for all test‑generation workflows.  
+- When generating tests, follow clean, idiomatic C# patterns and avoid brittle mocks.
+
+## Example usage patterns for agents
+  - Example usage to exercise built-ins from code:var controller = new Xc.Command.CommandController();
+controller.EnableDefaultCommands();
+await controller.Run("Say Hello to my little friend", ioContext, env);- Load external plugin packages at runtime (from `CommandController`):
   - call `AddPackageDirectory("<plugin-base-path>")` then `LoadCommands()` and then `Run(...)` as needed.
 
 ## Testing and debugging tips for agents
-- Unit tests live in `src/*Tests/` projects. Use `dotnet test` for targeted test runs (e.g. `dotnet test src/Xcaciv.Command.FileLoaderTests`).
+- Unit tests live in `src/*Tests/` projects. Use `@test` for targeted test runs (e.g. `@test src/Xcaciv.Command.FileLoaderTests`).
 - When a command fails during Run, `CommandController` writes trace messages and returns a brief error output chunk; inspect trace with `IIoContext.AddTraceMessage` call sites when debugging.
 - For assembly-loading issues, check `AssemblyContext` use sites in `CommandController.GetCommandInstance(string, string)` and ensure plugin DLLs are in the expected `bin/<pluginName>/` layout.
 

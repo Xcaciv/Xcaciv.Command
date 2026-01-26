@@ -28,7 +28,7 @@ public class ParameterCollectionBuilder
     /// <param name="attributes">The parameter attribute definitions.</param>
     /// <returns>A collection of validated parameter values.</returns>
     /// <exception cref="ArgumentException">If any parameter fails validation.</exception>
-    public ParameterCollection Build(Dictionary<string, string> parametersDict, AbstractCommandParameter[] attributes)
+    public ParameterCollection Build(Dictionary<string, string> parametersDict, AbstractCommandParameterAttribute[] attributes)
     {
         if (parametersDict == null)
             throw new ArgumentNullException(nameof(parametersDict));
@@ -36,7 +36,7 @@ public class ParameterCollectionBuilder
         var collection = new ParameterCollection();
         var errors = new List<string>();
 
-        foreach (var attr in (attributes ?? Array.Empty<AbstractCommandParameter>())
+        foreach (var attr in (attributes ?? Array.Empty<AbstractCommandParameterAttribute>())
             .Where(a => parametersDict.ContainsKey(a.Name)))
         {
             var rawValue = parametersDict[attr.Name];
@@ -70,14 +70,14 @@ public class ParameterCollectionBuilder
     /// <param name="attributes">The parameter attribute definitions.</param>
     /// <returns>A collection of validated parameter values.</returns>
     /// <exception cref="ArgumentException">If any parameter fails validation (throws on first error).</exception>
-    public ParameterCollection BuildStrict(Dictionary<string, string> parametersDict, AbstractCommandParameter[] attributes)
+    public ParameterCollection BuildStrict(Dictionary<string, string> parametersDict, AbstractCommandParameterAttribute[] attributes)
     {
         if (parametersDict == null)
             throw new ArgumentNullException(nameof(parametersDict));
 
         var collection = new ParameterCollection();
 
-        foreach (var attr in (attributes ?? Array.Empty<AbstractCommandParameter>())
+        foreach (var attr in (attributes ?? Array.Empty<AbstractCommandParameterAttribute>())
             .Where(a => parametersDict.ContainsKey(a.Name)))
         {
             var rawValue = parametersDict[attr.Name];

@@ -21,32 +21,15 @@ public class HelpService : IHelpService
     private readonly ConcurrentDictionary<string, Type?> _typeCache = new();
     public string BuildHelp(ICommandDelegate command, string[] parameters, IEnvironmentContext environment)
     {
-        if (command == null) throw new ArgumentNullException(nameof(command));
+        ArgumentNullException.ThrowIfNull(command);
 
         // Check if the command has a custom Help() implementation (not from AbstractCommand)
         // by checking if the declaring type is not AbstractCommand
         var commandType = command.GetType();
-        var helpMethod = commandType.GetMethod("Help", 
-            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
-        
-        if (helpMethod != null)
-        {
-            var declaringType = helpMethod.DeclaringType;
-            
-            // If Help() is declared on the command type itself (not AbstractCommand),
-            // use the custom implementation
-            if (declaringType != null && 
-                declaringType.FullName != "Xcaciv.Command.Core.AbstractCommand" &&
-                !declaringType.FullName!.StartsWith("System."))
-            {
-                return command.Help(parameters, environment);
-            }
-        }
 
         // Otherwise, build help from attributes
-        var baseCommand = Attribute.GetCustomAttribute(commandType, typeof(CommandRegisterAttribute)) as CommandRegisterAttribute;
-        
-        if (baseCommand == null)
+
+        if (Attribute.GetCustomAttribute(commandType, typeof(CommandRegisterAttribute)) is not CommandRegisterAttribute baseCommand)
         {
             throw new InvalidOperationException("CommandRegisterAttribute is required for all commands");
         }
@@ -55,10 +38,9 @@ public class HelpService : IHelpService
         var commandParametersFlag = GetFlagParameters(commandType);
         var commandParametersNamed = GetNamedParameters(commandType, false);
         var commandParametersSuffix = GetSuffixParameters(commandType, false);
-        var helpRemarks = Attribute.GetCustomAttributes(commandType, typeof(CommandHelpRemarksAttribute)) as CommandHelpRemarksAttribute[];
 
         var builder = new StringBuilder();
-        
+
         // Command name with parent if applicable
         if (Attribute.GetCustomAttribute(commandType, typeof(CommandRootAttribute)) is CommandRootAttribute rootCommand)
         {
@@ -123,7 +105,7 @@ public class HelpService : IHelpService
         }
 
         // Remarks section
-        if (helpRemarks != null && helpRemarks.Length > 0)
+        if (Attribute.GetCustomAttributes(commandType, typeof(CommandHelpRemarksAttribute)) is CommandHelpRemarksAttribute[] helpRemarks && helpRemarks.Length > 0)
         {
             builder.AppendLine("Remarks:");
             foreach (var remark in helpRemarks)

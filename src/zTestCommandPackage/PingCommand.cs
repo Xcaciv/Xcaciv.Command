@@ -10,18 +10,25 @@ using Xcaciv.Command.Interface.Attributes;
 
 namespace zTestCommandPackage
 {
-    [CommandRegister("PING", "PING")]
+    [CommandRegister("PING", "test command with parameters that outputs like echo")]
     [CommandParameterOrdered("echo_word", "ECHO")]
     [CommandParameterNamed("optional", "option", AllowedValues = ["1", "2"])]
     public class PingCommand : ICommandDelegate
     {
+        public string Command => "PING";
+        public string RootCommand => string.Empty;
         public string BaseCommand { get; protected set; } = "ECHO";
 
         public string FriendlyName { get; protected set; } = "echo";
 
-        public string Help(string[] parameters, IEnvironmentContext evn)
+        public Dictionary<string, string> GetDefaultEnvironment()
         {
-            return $"[{BaseCommand}] ({FriendlyName}) - test command to output each parameter as a chunk";
+            return new Dictionary<string, string>();
+        }
+
+        public List<ICommandParameter> GetParameters()
+        {
+            return new List<ICommandParameter>();
         }
 
         public async IAsyncEnumerable<IResult<string>> Main(IIoContext io, IEnvironmentContext statusContext)
@@ -40,10 +47,6 @@ namespace zTestCommandPackage
                         yield return pipedResult;
                     }
                 }
-            }
-            else if (io.Parameters.Length > 0 && io.Parameters[0].Equals("--HELP", StringComparison.CurrentCultureIgnoreCase))
-            {
-                yield return CommandResult<string>.Success(this.Help(io.Parameters, statusContext));
             }
             else
             {
@@ -66,9 +69,5 @@ namespace zTestCommandPackage
             return ValueTask.CompletedTask;
         }
 
-        public string OneLineHelp(string[] paramseters)
-        {
-            return $"{BaseCommand} - {FriendlyName}";
-        }
     }
 }

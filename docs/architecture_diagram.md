@@ -95,14 +95,14 @@ classDiagram
         -IAuditLogger _auditLogger
         -IOutputEncoder _outputEncoder
         -string _helpCommand
+        +RegisterBuiltInCommands()
         +AddPackageDirectory(string)
         +LoadCommands(string)
-        +EnableDefaultCommands()
         +AddCommand(string, ICommandDelegate, bool)
         +AddCommand(string, Type, bool)
         +AddCommand(ICommandDescription)
         +Run(string, IIoContext, IEnvironmentContext)*
-        +GetHelp(string, IIoContext, IEnvironmentContext)
+        +Run(string, IIoContext, IControllerEnvironmentContext, CancellationToken)*
     }
 
     class CommandRegistry {
@@ -312,27 +312,33 @@ sequenceDiagram
 ## Key Design Patterns
 
 ### 1. **Dependency Injection**
+
 - All major components accept interfaces through constructor injection
 - Supports testing with mock implementations
 - CommandController provides default implementations when not supplied
 
 ### 2. **Strategy Pattern**
+
 - `ICommandLoader` - Different strategies for discovering commands
 - `IPipelineExecutor` - Pipeline execution strategy
 - `ICommandFactory` - Command instantiation strategy
 
 ### 3. **Factory Pattern**
+
 - `CommandFactory` - Creates command instances
 - Supports both direct instantiation and dependency injection resolution
 
 ### 4. **Registry Pattern**
+
 - `CommandRegistry` - Centralized command lookup and registration
 
 ### 5. **Observer/Audit Pattern**
+
 - `IAuditLogger` - Tracks command execution and environment changes
 - `NoOpAuditLogger` - Default no-operation implementation
 
 ### 6. **Pipeline Pattern**
+
 - Commands connected via channels for streaming data
 - `IIoContext` manages bounded channels for backpressure control
 

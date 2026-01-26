@@ -11,18 +11,52 @@ namespace Xcaciv.Command.Core
 {
     public abstract class AbstractCommand : ICommandDelegate
     {
-        private static IHelpService? _helpService;
-
         public ResultFormat OutputFormat { get; protected set; } = ResultFormat.General;
+        protected string _command = string.Empty;
+        private string _rootCommand = string.Empty;
 
-        /// <summary>
-        /// Sets the help service used by all AbstractCommand instances for help formatting.
-        /// Should be set during application startup, typically by the CommandController.
-        /// TODO: make this non-static !!!
-        /// </summary>
-        public static void SetHelpService(IHelpService helpService)
+        public string Command
         {
-            _helpService = helpService ?? throw new ArgumentNullException(nameof(helpService));
+            get
+            {
+                if (String.IsNullOrEmpty(_command))
+                {
+                    var thisType = GetType();
+                    var registration = Attribute.GetCustomAttribute(thisType, typeof(CommandRegisterAttribute)) as CommandRegisterAttribute;
+                    if (registration == null)
+                    {
+                        throw new InvalidOperationException("CommandRegisterAttribute is required for all commands");
+                    }
+                    _command = registration.Command;
+                }
+                return _command;
+            }
+            set
+            {
+                _command = NamesValidator.GetValidCommandName(value);
+            }
+        }
+
+        public string RootCommand
+        {
+            get
+            {
+                if (String.IsNullOrEmpty(_rootCommand))
+                {
+                    var thisType = GetType();
+                    var registration = Attribute.GetCustomAttribute(thisType, typeof(CommandRootAttribute)) as CommandRootAttribute;
+                    if (registration == null)
+                    {
+                        throw new InvalidOperationException("CommandRootAttribute is required for all commands");
+                    }
+                    _rootCommand = registration.Command;
+                }
+                return _rootCommand;
+            }
+            set
+            {
+                _rootCommand = NamesValidator.GetValidCommandName(value);
+            }
         }
 
         /// <summary>
@@ -32,49 +66,6 @@ namespace Xcaciv.Command.Core
         public virtual ValueTask DisposeAsync()
         {
             return ValueTask.CompletedTask;
-        }
-
-        /// <summary>
-        /// Generates full help output for the command using the configured help service.
-        /// </summary>
-        /// <param name="parameters">Command parameters for context</param>
-        /// <param name="env">Environment context</param>
-        /// <returns>Formatted help string</returns>
-        public virtual string Help(string[] parameters, IEnvironmentContext env)
-        {
-            if (_helpService == null)
-            {
-                throw new InvalidOperationException(
-                    "HelpService has not been configured. Call AbstractCommand.SetHelpService() during application startup.");
-            }
-
-            return _helpService.BuildHelp(this, parameters, env);
-        }
-
-        /// <summary>
-        /// Generates single line help summary for command listing.
-        /// </summary>
-        /// <param name="parameters">Command parameters for context</param>
-        /// <returns>Single line formatted help string</returns>
-        public virtual string OneLineHelp(string[] parameters)
-        {
-            if (_helpService == null)
-            {
-                var thisType = GetType();
-                var baseCommand = Attribute.GetCustomAttribute(thisType, typeof(CommandRegisterAttribute)) as CommandRegisterAttribute;
-                if (baseCommand == null)
-                {
-                    throw new InvalidOperationException("CommandRegisterAttribute is required for all commands");
-                }
-
-                var isRoot = Attribute.GetCustomAttribute(thisType, typeof(CommandRootAttribute)) is CommandRootAttribute;
-                var prefix = isRoot ? "-\t" : "";
-                return $"{prefix}{baseCommand.Command,-12} {baseCommand.Description}";
-            }
-
-            var commandParameters = new CommandParameters();
-            var commandDesc = commandParameters.CreatePackageDescription(GetType(), null!);
-            return _helpService.BuildOneLineHelp(commandDesc);
         }
 
         public async IAsyncEnumerable<IResult<string>> Main(IIoContext io, IEnvironmentContext environment)
@@ -104,16 +95,8 @@ namespace Xcaciv.Command.Core
             else
             {
                 var parameterArray = io.Parameters ?? Array.Empty<string>();
-                var isHelp = _helpService?.IsHelpRequest(parameterArray) ?? false;
-                if (isHelp)
-                {
-                    yield return CommandResult<string>.Success(Help(parameterArray, environment), ResultFormat.General);
-                }
-                else
-                {
-                    var executionResult = HandleExecution(processedParameters, environment);
-                    yield return executionResult;
-                }
+                var executionResult = HandleExecution(processedParameters, environment);
+                yield return executionResult;
             }
         }
 
@@ -289,5 +272,24 @@ namespace Xcaciv.Command.Core
         {
         }
 
+        public virtual Dictionary<string, string> GetDefaultEnvironment()
+        {
+            return new Dictionary<string, string>();
+        }
+
+        /// <summary>
+        /// Retrieves a list of all parameters associated with the command, including ordered, flag, named, and suffix
+        /// parameters. You must override this method if you are not using the standard attribute-based parameter definition.
+        /// </summary>
+        /// <returns>A list of <see cref="ICommandParameter"/> objects representing all parameters for the command.</returns>
+        public virtual List<ICommandParameter> GetParameters()
+        {
+            var parameters = new List<ICommandParameter>();
+            parameters.AddRange(GetOrderedParameters(false).ToList<ICommandParameter>());
+            parameters.AddRange(GetFlagParameters().ToList<ICommandParameter>());
+            parameters.AddRange(GetNamedParameters(false).ToList<ICommandParameter>());
+            parameters.AddRange(GetSuffixParameters(false).ToList<ICommandParameter>());
+            return parameters;
+        }
     }
 }

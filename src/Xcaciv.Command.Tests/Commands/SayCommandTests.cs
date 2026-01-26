@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Xcaciv.Command.FileLoader;
 using Xcaciv.Command.Commands;
 using Xcaciv.Command.Interface.Attributes;
+using Xcaciv.Command.Core;
 
 namespace Xcaciv.Command.Tests.Commands
 {
@@ -26,7 +27,7 @@ namespace Xcaciv.Command.Tests.Commands
 
             // verify the output of the first run
             // by looking at the output of the second output line
-            Assert.Equal("what is up", textio.Children.First().Output.First());
+            Assert.Equal("what is up", textio.ToString());
         }
 
         [Fact()]
@@ -55,7 +56,7 @@ namespace Xcaciv.Command.Tests.Commands
 
             // verify the output of the first run
             // by looking at the output of the second output line
-            Assert.Equal("what is up!", textio.Children.First().Output.First());
+            Assert.Equal("what is up!", textio.ToString());
         }
 
         [Fact()]
@@ -93,10 +94,11 @@ namespace Xcaciv.Command.Tests.Commands
         [Fact()]
         public void OneLineHelpTest()
         {
-            var textio = new TestImpementations.TestTextIo();
-            var command = new SayCommand();
-            
-            var result = command.OneLineHelp(textio.Parameters);
+            var commandParameters = new CommandParameters();
+            var description = commandParameters.CreatePackageDescription(typeof(SayCommand), null!);
+            var helpService = new HelpService();
+
+            var result = helpService.BuildOneLineHelp(description);
 
             Assert.Equal("SAY          Like echo but more valley.", result);
         }

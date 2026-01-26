@@ -213,7 +213,7 @@ namespace Xcaciv.Command.Tests.Commands
 
             // Act
             await controller.Run("SET --help", textIo, env);
-            var helpText = textIo.GatherChildOutput(); // Help goes to child context
+            var helpText = textIo.ToString(); // Help goes to child context
 
             // Assert
             Assert.Contains("SET", helpText, StringComparison.OrdinalIgnoreCase);

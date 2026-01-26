@@ -16,7 +16,7 @@ public class CommandDescription : ICommandDescription
     /// <summary>
     /// text command
     /// </summary>
-    public string BaseCommand { get => command; set => command = GetValidCommandName(value); }
+    public string BaseCommand { get => command; set => command = NamesValidator.GetValidCommandName(value); }
     /// <summary>
     /// sub command text
     /// used to limit the secondary command text
@@ -34,25 +34,4 @@ public class CommandDescription : ICommandDescription
     /// explicitly indicates if a command modifes the environment
     /// </summary>
     public bool ModifiesEnvironment { get; set; }
-
-    /// <summary>
-    /// parse primary command from a command line
-    /// </summary>
-    /// <param name="commandLine">full command line</param>
-    /// <param name="upper">convert to uppercase</param>
-    /// <returns>validated command name</returns>
-    public static string GetValidCommandName(string commandLine, bool upper = true)
-    {
-        return CommandNameValidator.GetValidCommandName(commandLine, upper);
-    }
-    
-    /// <summary>
-    /// parses arguments from a command line
-    /// </summary>
-    /// <param name="commandLine">full command line</param>
-    /// <returns>array of arguments (excluding command name)</returns>
-    public static string[] GetArgumentsFromCommandline(string commandLine)
-    {
-        return CommandNameValidator.GetArgumentsFromCommandline(commandLine);
-    }
 }

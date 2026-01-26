@@ -26,8 +26,8 @@ namespace Xcaciv.Command.Interface.Attributes
         public string Command { 
             get;
             set
-            { field = CommandNameValidator.GetValidCommandName(value); }
-        } = "";
+            { field = NamesValidator.GetValidCommandName(value); }
+        }  = String.Empty;
         /// <summary>
         /// What does this command do
         /// </summary>
@@ -36,6 +36,6 @@ namespace Xcaciv.Command.Interface.Attributes
         /// a short name for the command
         /// eg. "ls" for "list"
         /// </summary>
-        public string Alias { get; set; } = "";
+        public string Alias { get; set; }  = String.Empty;
     }
 }

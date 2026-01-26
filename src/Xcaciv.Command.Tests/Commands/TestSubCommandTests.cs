@@ -15,9 +15,56 @@ namespace Xcaciv.Command.Tests.Commands
 {
     public class TestSubCommandTests
     {
-
         [Fact()]
-        public async Task HandleExecutionTest()
+        public async Task ParameterTest()
+        {
+            var commands = new CommandController(new Crawler(), AppContext.BaseDirectory);
+            commands.RegisterBuiltInCommands();
+            commands.AddCommand("ignored", typeof(TestSubCommand));
+
+            var env = new EnvironmentContext();
+            var textio = new TestImpementations.TestTextIo();
+            // simulate user input
+            await commands.Run("package search nuget", textio, env);
+
+            // Check all available output (includes children)
+            var allOutput = textio.ToString();
+
+            // The command should produce some output
+            Assert.NotEmpty(allOutput);
+
+            // Verify no errors in the output
+            Assert.DoesNotContain("ERROR:", allOutput);
+
+            // Verify it's showing parameters (basic smoke test)
+            Assert.Contains("Parameters", allOutput);
+        }
+        [Fact()]
+        public async Task HandleShortCommandExecutionTest()
+        {
+            var commands = new CommandController(new Crawler(), AppContext.BaseDirectory);
+            commands.RegisterBuiltInCommands();
+            commands.AddCommand("ignored", typeof(TestSubCommand));
+
+            var env = new EnvironmentContext();
+            var textio = new TestImpementations.TestTextIo();
+            // simulate user input
+            await commands.Run("package search nuget", textio, env);
+
+            // Check all available output (includes children)
+            var allOutput = textio.ToString();
+
+            // The command should produce some output
+            Assert.NotEmpty(allOutput);
+
+            // Verify no errors in the output
+            Assert.DoesNotContain("ERROR:", allOutput);
+
+            // Verify it's showing parameters (basic smoke test)
+            Assert.Contains("Parameters", allOutput);
+        }
+        [Fact()]
+        public async Task HandleLongCommandExecutionTest()
         {
             var commands = new CommandController(new Crawler(), AppContext.BaseDirectory);
             commands.RegisterBuiltInCommands();

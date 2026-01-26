@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
+using System.Linq;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using Xcaciv.Command;
@@ -88,7 +89,7 @@ namespace Xcaciv.Command.Tests
         }
 
         [Fact]
-        public void Help_UsesSystemCommandHelp()
+        public async Task Help_UsesSystemCommandHelp()
         {
             var systemCommand = new SystemCommand("greet", "writes greetings");
             systemCommand.SetAction(parseResult => Console.Out.Write("greetings"));
@@ -96,10 +97,18 @@ namespace Xcaciv.Command.Tests
             var adapter = new CommandLineCommand<SystemCommand>();
             adapter.SetCommand(systemCommand);
 
-            var helpText = adapter.Help(Array.Empty<string>(), new EnvironmentContext());
+            var ioContext = new MemoryIoContext(parameters: new[] { "--help" });
+            var environment = new EnvironmentContext();
+            var results = new List<IResult<string>>();
 
-            Assert.Contains("greet", helpText, StringComparison.OrdinalIgnoreCase);
-            Assert.Contains("writes greetings", helpText, StringComparison.OrdinalIgnoreCase);
+            await foreach (var result in adapter.Main(ioContext, environment))
+            {
+                results.Add(result);
+            }
+
+            var output = string.Join(Environment.NewLine, results.Where(r => r.IsSuccess).Select(r => r.Output));
+            Assert.Contains("greet", output, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("writes greetings", output, StringComparison.OrdinalIgnoreCase);
         }
     }
 }

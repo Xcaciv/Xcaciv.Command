@@ -13,10 +13,17 @@ public class PipelineExecutor : IPipelineExecutor
 {
     public PipelineConfiguration Configuration { get; set; } = new PipelineConfiguration();
 
+    public string LastStageCommand { get; internal set; } = string.Empty;
+
+    public PipelineExecutor()
+    {
+    }
+
+
     public async Task ExecuteAsync(
         string commandLine,
         IIoContext ioContext,
-        IEnvironmentContext environmentContext,
+        IControllerEnvironmentContext environmentContext,
         Func<string, IIoContext, IEnvironmentContext, Task> executeCommand)
     {
         await ExecuteAsync(commandLine, ioContext, environmentContext,
@@ -27,7 +34,7 @@ public class PipelineExecutor : IPipelineExecutor
     public async Task ExecuteAsync(
         string commandLine,
         IIoContext ioContext,
-        IEnvironmentContext environmentContext,
+        IControllerEnvironmentContext environmentContext,
         Func<string, IIoContext, IEnvironmentContext, CancellationToken, Task> executeCommand,
         CancellationToken cancellationToken)
     {
@@ -63,10 +70,10 @@ public class PipelineExecutor : IPipelineExecutor
         await CollectPipelineOutput(outputChannel, ioContext, cancellationToken).ConfigureAwait(false);
     }
 
-    private async Task<(List<Task>, Channel<IResult<string>>?)> CreatePipelineStages(
+    private async Task<(List<Task> tasks, Channel<IResult<string>>? outputChannel)> CreatePipelineStages(
         string commandLine,
         IIoContext ioContext,
-        IEnvironmentContext environmentContext,
+        IControllerEnvironmentContext environmentContext,
         Func<string, IIoContext, IEnvironmentContext, CancellationToken, Task> executeCommand,
         CancellationToken cancellationToken)
     {
@@ -82,35 +89,50 @@ public class PipelineExecutor : IPipelineExecutor
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var commandName = CommandDescription.GetValidCommandName(command).ToString();
-            var args = CommandDescription.GetArgumentsFromCommandline(command);
-            var childContext = await ioContext.GetChild(args).ConfigureAwait(false);
+            var commandName = NamesValidator.GetValidCommandName(command);
+            var args = NamesValidator.GetArgumentsFromCommandline(command);
+            var childIoContext = await ioContext.GetChild().ConfigureAwait(false);
+            await childIoContext.SetParameters(args).ConfigureAwait(false);
 
             // Set pipeline stage metadata for audit logging
-            childContext.SetPipelineStage(currentStage, totalStages);
+            childIoContext.SetPipelineStage(currentStage, totalStages);
 
             if (pipeChannel != null)
             {
-                childContext.SetInputPipe(pipeChannel.Reader);
+                childIoContext.SetInputPipe(pipeChannel.Reader);
             }
 
             pipeChannel = Channel.CreateBounded<IResult<string>>(new BoundedChannelOptions(Configuration.MaxChannelQueueSize)
             {
                 FullMode = GetChannelFullMode(Configuration.BackpressureMode)
             });
-            childContext.SetOutputPipe(pipeChannel.Writer);
+            childIoContext.SetOutputPipe(pipeChannel.Writer);
+                        
+            tasks.Add(ExecuteStageAsync());
 
-            tasks.Add(RunStageAsync(commandName, childContext, environmentContext, executeCommand, Configuration, cancellationToken));
+            async Task ExecuteStageAsync()
+            {
+                var childEnvironmentContext = await environmentContext.GetChild(commandName);
+                await RunStageAsync(commandName, childIoContext, childEnvironmentContext, executeCommand, Configuration, cancellationToken).ConfigureAwait(false);
+                if (childEnvironmentContext.HasChanged)
+                {
+                    environmentContext.UpdateEnvironment(childEnvironmentContext.GetEnvironment(), commandName);
+                }
+            }
+
+            // track last stage info for potential global reintegration
+            LastStageCommand = commandName;
+
             currentStage++;
         }
 
         return (tasks, pipeChannel);
     }
 
-    private static Task RunStageAsync(
+    private Task RunStageAsync(
         string commandName,
         IIoContext childContext,
-        IEnvironmentContext environmentContext,
+        IEnvironmentContext childEnvironmentContext,
         Func<string, IIoContext, IEnvironmentContext, CancellationToken, Task> executeCommand,
         PipelineConfiguration configuration,
         CancellationToken cancellationToken)
@@ -133,7 +155,7 @@ public class PipelineExecutor : IPipelineExecutor
 
                 try
                 {
-                    await executeCommand(commandName, childContext, environmentContext, stageCts.Token).ConfigureAwait(false);
+                    await executeCommand(commandName, childContext, childEnvironmentContext, stageCts.Token).ConfigureAwait(false);
 
                     // If parent cancellation was requested during or right after execution, propagate it
                     if (cancellationToken.IsCancellationRequested)
@@ -169,7 +191,7 @@ public class PipelineExecutor : IPipelineExecutor
                         // Parent cancellation - complete gracefully and propagate
                         await childContext.AddTraceMessage($"Pipeline stage cancelled: {commandName}").ConfigureAwait(false);
                         await childContext.Complete(null).ConfigureAwait(false);
-                        throw; // Re-throw to propagate cancellation
+                        throw;
                     }
                 }
             }
@@ -199,4 +221,5 @@ public class PipelineExecutor : IPipelineExecutor
         PipelineBackpressureMode.Block => BoundedChannelFullMode.Wait,
         _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, "Unsupported backpressure mode")
     };
+
 }

@@ -32,13 +32,14 @@ namespace Xcaciv.Command.Tests.Commands
         private static string formatParameters(Dictionary<string, IParameterValue> parameters)
         {
             var output = new StringBuilder($"\n## Parameters\n\n");
-            output.Append("| Key | DataType | Valid | Value |\n|---------|--------|-------|-------|\n");
+            output.Append("| Key | Name | DataType | Valid | Value |\n|---------|--------|-------|-------|\n");
 
             foreach (var parameter in parameters)
             {
+                var key = parameter.Key;
                 var value = parameter.Value;
                 var parameterType = value.DataType;
-                output.Append($"|{value.Name} | {value.DataType.Name} | {value.IsValid} | {value.RawValue}|\n");
+                output.Append($"| {key} |{value.Name} | {value.DataType.Name} | {value.IsValid} | {value.RawValue}|\n");
             }
 
             return output.ToString();

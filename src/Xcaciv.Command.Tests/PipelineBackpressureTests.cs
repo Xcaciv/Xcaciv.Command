@@ -320,6 +320,14 @@ namespace Xcaciv.Command.Tests
             _delayMs = delayMs;
         }
 
+        public string Command => "TESTPRODUCER";
+
+        public string RootCommand => string.Empty;
+
+        public Dictionary<string, string> GetDefaultEnvironment() => new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        public List<ICommandParameter> GetParameters() => new List<ICommandParameter>();
+
         public async IAsyncEnumerable<IResult<string>> Main(IIoContext ioContext, IEnvironmentContext env)
         {
             for (int i = 0; i < _itemCount; i++)
@@ -333,8 +341,6 @@ namespace Xcaciv.Command.Tests
             }
         }
 
-        public string Help(string[] parameters, IEnvironmentContext env) => "Test producer command";
-        public string OneLineHelp(string[] parameters) => "TestProducer    Produces test items for backpressure testing";
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 
@@ -351,6 +357,14 @@ namespace Xcaciv.Command.Tests
         {
             _delayMs = delayMs;
         }
+
+        public string Command => "TESTSLOWCONSUMER";
+
+        public string RootCommand => string.Empty;
+
+        public Dictionary<string, string> GetDefaultEnvironment() => new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        public List<ICommandParameter> GetParameters() => new List<ICommandParameter>();
 
         public async IAsyncEnumerable<IResult<string>> Main(IIoContext ioContext, IEnvironmentContext env)
         {
@@ -369,8 +383,6 @@ namespace Xcaciv.Command.Tests
             }
         }
 
-        public string Help(string[] parameters, IEnvironmentContext env) => "Test slow consumer command";
-        public string OneLineHelp(string[] parameters) => "TestSlowConsumer Consumes input slowly for backpressure testing";
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 }

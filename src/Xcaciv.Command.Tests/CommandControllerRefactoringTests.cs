@@ -217,7 +217,7 @@ namespace Xcaciv.Command.Tests
             // Arrange
             var controller = new CommandController();
             controller.RegisterBuiltInCommands();
-            var env = new EnvironmentContext();
+            var env = new ControllerEnvironmentContext();
 
             // Act - Execute multiple commands in sequence
             var ioContext1 = new TestTextIo(new[] { "first" });

@@ -108,22 +108,20 @@ public class CommandController : Interface.ICommandController
         _auditLogger = new NoOpAuditLogger();
         _outputEncoder = new NoOpEncoder();
 
-        _commandExecutor.HelpCommand = _helpCommand;
         _commandExecutor.AuditLogger = _auditLogger;
-
-        // Initialize the static help service for AbstractCommand instances.
-        // This allows all AbstractCommand subclasses to delegate help generation to IHelpService.
-        // For non-AbstractCommand implementations (ICommandDelegate), help logic remains custom.
-        AbstractCommand.SetHelpService(_helpService);
+        _commandExecutor.HelpCommand = _helpCommand;
     }
 
+    /// <summary>
+    /// Gets or sets the command name for the help command.
+    /// </summary>
     public string HelpCommand
     {
         get => _helpCommand;
         set
         {
-            _helpCommand = value;
-            _commandExecutor.HelpCommand = value;
+            _helpCommand = string.IsNullOrWhiteSpace(value) ? "HELP" : NamesValidator.GetValidCommandName(value);
+            _commandExecutor.HelpCommand = _helpCommand;
         }
     }
 
@@ -217,6 +215,11 @@ public class CommandController : Interface.ICommandController
     /// <summary>
     /// parse a command line, find and execute the command passing in the arguments
     /// </summary>
+    public async Task Run(string commandLine, IIoContext ioContext, IControllerEnvironmentContext env)
+    {
+        await Run(commandLine, ioContext, env, CancellationToken.None).ConfigureAwait(false);
+    }
+
     public async Task Run(string commandLine, IIoContext ioContext, IEnvironmentContext env)
     {
         await Run(commandLine, ioContext, env, CancellationToken.None).ConfigureAwait(false);
@@ -224,65 +227,81 @@ public class CommandController : Interface.ICommandController
 
     public async Task Run(string commandLine, IIoContext ioContext, IEnvironmentContext env, CancellationToken cancellationToken)
     {
-        if (commandLine == null) throw new ArgumentNullException(nameof(commandLine));
+        if (env == null) throw new ArgumentNullException(nameof(env));
+        var controllerEnv = env as IControllerEnvironmentContext ?? new ControllerEnvironmentContext(env);
+        await Run(commandLine, ioContext, controllerEnv, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task Run(string commandText, IIoContext ioContext, IControllerEnvironmentContext env, CancellationToken cancellationToken)
+    {
+        if (commandText == null) throw new ArgumentNullException(nameof(commandText));
         if (ioContext == null) throw new ArgumentNullException(nameof(ioContext));
         if (env == null) throw new ArgumentNullException(nameof(env));
 
-        if (env is EnvironmentContext envContext)
-        {
-            envContext.SetAuditLogger(_auditLogger);
-        }
+        cancellationToken.ThrowIfCancellationRequested();
+
+        env.SetAuditLogger(_auditLogger);
 
         ioContext.SetOutputEncoder(_outputEncoder);
 
-        cancellationToken.ThrowIfCancellationRequested();
-
-        if (commandLine.IndexOf(CommandSyntax.PipelineDelimiter) >= 0)
+        if (commandText.IndexOf(CommandSyntax.PipelineDelimiter) >= 0)
         {
-            await _pipelineExecutor.ExecuteAsync(commandLine, ioContext, env, ExecuteCommandInternal, cancellationToken).ConfigureAwait(false);
+            var controllerEnvironmentChild = await env.GetChild();
+            await _pipelineExecutor.ExecuteAsync(commandText, ioContext, controllerEnvironmentChild, ExecuteCommandInternal, cancellationToken).ConfigureAwait(false);
+            var lastCommandName = _pipelineExecutor.LastStageCommand;
+
+            if (controllerEnvironmentChild.HasChanged && _commandRegistry.TryGetCommand(lastCommandName, out var commandDesc) && commandDesc?.ModifiesEnvironment == true)
+            {
+                env.UpdateEnvironment(controllerEnvironmentChild.GetEnvironment());
+                env.UpdateEnvironment(controllerEnvironmentChild.GetEnvironment(lastCommandName), lastCommandName);
+            }
         }
         else
         {
-            var commandName = CommandDescription.GetValidCommandName(commandLine);
-            var args = CommandDescription.GetArgumentsFromCommandline(commandLine);
+            var commandName = NamesValidator.GetValidCommandName(commandText);
+            var args = NamesValidator.GetArgumentsFromCommandline(commandText);
             await ioContext.SetParameters([.. args]).ConfigureAwait(false);
 
-            await using var childContext = await ioContext.GetChild(ioContext.Parameters).ConfigureAwait(false);
-            await ExecuteCommandInternal(commandName, childContext, env, cancellationToken).ConfigureAwait(false);
+            var childEnv = await env.GetChild(commandName).ConfigureAwait(false);
+            await ExecuteCommandInternal(commandName, ioContext, childEnv, cancellationToken).ConfigureAwait(false);
+            if (childEnv.HasChanged && _commandRegistry.TryGetCommand(commandName, out var commandDesc) && commandDesc?.ModifiesEnvironment == true)
+            {
+                env.UpdateEnvironment(childEnv.GetEnvironment(), commandName);
+            }
         }
     }
 
-    /// <summary>
-    /// Asynchronously output all the help strings for a command.
-    /// </summary>
-    public async Task GetHelpAsync(string command, IIoContext context, IEnvironmentContext env, CancellationToken cancellationToken = default)
+    private async Task ExecuteCommandInternal(string commandKey, IIoContext ioContext, IEnvironmentContext env, CancellationToken cancellationToken)
     {
-        await _commandExecutor.GetHelpAsync(command, context, env, cancellationToken).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var parameters = ioContext.Parameters ?? Array.Empty<string>();
+        if (IsHelpRequest(commandKey, parameters))
+        {
+            await HandleHelpRequest(commandKey, ioContext, env, cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        await _commandExecutor.ExecuteAsync(commandKey, ioContext, env, cancellationToken).ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// output all the help strings
-    /// </summary>
-    /// <remarks>
-    /// Note: This method blocks on an async operation to maintain backward compatibility with
-    /// the ICommandController interface. To avoid potential deadlocks in some synchronization
-    /// contexts, consider using the async Run method with help parameters instead.
-    /// </remarks>
-    [Obsolete("Use GetHelpAsync() instead. This method will be removed in v3.0.", false)]
-    public void GetHelp(string command, IIoContext context, IEnvironmentContext env)
+    private bool IsHelpRequest(string commandKey, string[] parameters)
     {
-        // Run asynchronously on the thread pool to avoid potential deadlocks
-        // when blocking synchronously on an async operation.
-        Task.Run(() => _commandExecutor.GetHelpAsync(command, context, env)).GetAwaiter().GetResult();
+        if (commandKey.Equals(_helpCommand, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return _helpService.IsHelpRequest(parameters);
     }
 
-    private Task ExecuteCommandInternal(string commandKey, IIoContext ioContext, IEnvironmentContext env)
+    private Task HandleHelpRequest(string commandKey, IIoContext ioContext, IEnvironmentContext env, CancellationToken cancellationToken)
     {
-        return _commandExecutor.ExecuteAsync(commandKey, ioContext, env);
-    }
+        var parameters = ioContext.Parameters ?? Array.Empty<string>();
+        var targetCommand = commandKey.Equals(_helpCommand, StringComparison.OrdinalIgnoreCase)
+            ? (parameters.Length > 0 ? parameters[0] : string.Empty)
+            : commandKey;
 
-    private Task ExecuteCommandInternal(string commandKey, IIoContext ioContext, IEnvironmentContext env, CancellationToken cancellationToken)
-    {
-        return _commandExecutor.ExecuteAsync(commandKey, ioContext, env, cancellationToken);
+        return _commandExecutor.GetHelpAsync(targetCommand, ioContext, env, cancellationToken);
     }
 }

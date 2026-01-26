@@ -26,7 +26,7 @@ namespace Xcaciv.Command.Interface.Attributes
         public string Command { 
             get;
             set
-            { field = CommandNameValidator.GetValidCommandName(value); }
+            { field = NamesValidator.GetValidCommandName(value); }
         }
         /// <summary>
         /// version of the command
@@ -40,11 +40,11 @@ namespace Xcaciv.Command.Interface.Attributes
         /// Prototype/example of how to call the command with parameters parameters
         /// </summary>
         /// <example>CMD [-A | -U] [-Q] [-D] [-E ON | OFF]</example>
-        public string Prototype { get; set; } = "";
+        public string Prototype { get; set; }  = String.Empty;
         /// <summary>
         /// a short name for the command
         /// eg. "ls" for "list"
         /// </summary>
-        public string Alias { get; set; } = "";
+        public string Alias { get; set; }  = String.Empty;
     }
 }

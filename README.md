@@ -3,17 +3,22 @@
 Excessively modular, async pipeable, command framework with strongly-typed parameter support.
 
 ```csharp
-    var controller = new Xc.Command.CommandController();
-    controller.RegisterBuiltInCommands();
+using Xcaciv.Command;
+using Xcaciv.Command.Interface;
 
-    _ = await controller.Run("Say Hello to my little friend", ioContext, env);
+var controller = new CommandController();
+controller.RegisterBuiltInCommands();
 
-    // outputs: Hello to my little friend
+var io = new MemoryIoContext();
+var env = new ControllerEnvironmentContext();
+
+await controller.Run("Say Hello to my little friend", io, env);
 ```
 
-Commands are .NET class libraries that contain implementations of the `Xc.Command.ICommand` interface and are decorated with attributes that describe the command and its parameters. These attributes are used to filter and validate input as well as output auto-generated help for the user.
+Commands are .NET class libraries that contain implementations of the `Xc.Command.ICommandDelegate` interface and are decorated with attributes that describe the command and its parameters. These attributes filter and validate input and drive auto-generated help.
 
 **Authoring note:** When building a new command, start from the template and guidance in [COMMAND_TEMPLATE.md](COMMAND_TEMPLATE.md) to match the latest interfaces (`ICommandDelegate`/`AbstractCommand`), `OutputFormat`, and environment propagation rules.
+
 ## Getting Started
 
 - Read the quickstart in [docs/learn/quickstart.md](docs/learn/quickstart.md) for a five-minute walkthrough.
@@ -57,16 +62,11 @@ For detailed security model, plugin development guidelines, and vulnerability re
 Command execution and environment changes can be logged via `IAuditLogger`:
 
 ```csharp
-// Example: Using audit logging
 var controller = new CommandController();
 controller.RegisterBuiltInCommands();
-var env = new EnvironmentContext();
+var env = new ControllerEnvironmentContext();
 
-// Provide an audit logger implementation
-var auditLogger = new YourAuditLoggerImplementation();
-controller.AuditLogger = auditLogger;
-
-// Command execution and environment changes are now logged
+controller.AuditLogger = new YourAuditLoggerImplementation();
 await controller.Run("say hello", ioContext, env);
 ```
 
@@ -89,7 +89,18 @@ See `SECURITY.md` for secure audit logging patterns.
 
 ## Version History
 
-### 3.2.3 (Current)
+### 3.3.0 (Current)
+
+- **Version bump:** All packages aligned to **3.3.0** (Command, Core, Interface, FileLoader, DependencyInjection, Extensions.Commandline)
+- **Documentation refresh:** Quickstart, API references, and examples updated to use `RegisterBuiltInCommands` and the v3.2.3+ `HandlePipedChunk(IResult<string>)` signature
+- **Defaults:** .NET 10 targeting with optional `.NET 8` multi-targeting via `UseNet08`
+
+### 3.2.4
+
+- **Version bump:** Packages aligned to **3.2.4**
+- **API cleanup:** Removed duplicate `AddCommand(string, ICommandDelegate, bool)` declaration from `ICommandController`
+
+### 3.2.3
 
 - **HandlePipedChunk Signature Change:** `HandlePipedChunk` now accepts `IResult<string>` instead of `string` for full result context access
 - **Breaking Change:** Custom commands must update `HandlePipedChunk` signature and use `pipedChunk.Output` to access string value

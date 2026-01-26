@@ -15,7 +15,7 @@ namespace Xcaciv.Command
         /// Thread safe collection of env vars
         /// MUST be set when creating a child!
         /// </summary>
-        protected ConcurrentDictionary<string, string> EnvironmentVariables { get; set; } = new ConcurrentDictionary<string, string>();
+        protected ConcurrentDictionary<string, string> EnvironmentVariables { get; set; } = new ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
         /// Optional audit logger for environment variable changes
@@ -32,9 +32,15 @@ namespace Xcaciv.Command
 
         public EnvironmentContext() { }
 
-        public EnvironmentContext(Dictionary<string, string> environment)
+        public EnvironmentContext(Guid? parent = null)
+        {
+            this.Parent = parent;
+        }
+
+        public EnvironmentContext(Dictionary<string, string> environment, Guid? parent = null)
         {
             this.UpdateEnvironment(environment);
+            this.Parent = parent;
         }
 
         public ValueTask DisposeAsync()
@@ -42,7 +48,7 @@ namespace Xcaciv.Command
             return ValueTask.CompletedTask;
         }
 
-        public Task<IEnvironmentContext> GetChild(string[]? childArguments = null)
+        public Task<IEnvironmentContext> GetChild()
         {
             var childValues = this.GetEnvironment();
             var child = new EnvironmentContext(childValues);
@@ -70,8 +76,6 @@ namespace Xcaciv.Command
         /// <returns></returns>
         public virtual void SetValue(string key, string addValue)
         {
-            // make case insensitive var names
-            key = key.ToUpper();
             string? oldValue = null;
             
             EnvironmentVariables.AddOrUpdate(key, addValue, (key, value) =>
@@ -93,9 +97,6 @@ namespace Xcaciv.Command
         /// <returns></returns>
         public virtual string GetValue(string key, string defaultValue = "", bool storeDefault = true)
         {
-            // make case insensitive var names
-            key = key.ToUpper();
-
             string? returnValue;
             if (!EnvironmentVariables.TryGetValue(key, out returnValue) &&
                 storeDefault)

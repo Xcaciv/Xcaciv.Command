@@ -6,7 +6,7 @@ namespace Xcaciv.Command.Interface;
 /// Utility class for validating and parsing command names and arguments.
 /// Provides centralized command name normalization logic.
 /// </summary>
-public static class CommandNameValidator
+public static class NamesValidator
 {
     /// <summary>
     /// Regex for cleansing command names - only allows alphanumeric, dashes, underscores, and spaces

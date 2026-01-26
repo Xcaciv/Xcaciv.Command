@@ -52,15 +52,15 @@ namespace Xcaciv.Command.Tests
             var controller = new CommandController(new Crawler(), @"..\..\..\..\..");
             controller.AddPackageDirectory(commandPackageDir);
             controller.LoadCommands(string.Empty);
-            var env = new EnvironmentContext();
+            var env = new ControllerEnvironmentContext();
             var textio = new TestTextIo();
 
             // Act
             await controller.Run("echo test security", textio, env);
 
             // Assert
-            Assert.Contains("test", textio.Children.First().Output);
-            Assert.Contains("security", textio.Children.First().Output);
+            Assert.Contains("test", textio.Output);
+            Assert.Contains("security", textio.Output);
         }
 
         [Fact]
@@ -104,17 +104,15 @@ namespace Xcaciv.Command.Tests
             var controller = new CommandController(new Crawler(), @"..\..\..\..\..");
             controller.AddPackageDirectory(commandPackageDir);
             controller.LoadCommands(string.Empty);
-            var env = new EnvironmentContext();
+            var env = new ControllerEnvironmentContext();
             var textio = new TestTextIo();
 
             // Act - Execute a command that requires plugin loading
             await controller.Run("echo test", textio, env);
-            var firstChild = textio.Children.FirstOrDefault();
 
             // Assert
-            Assert.NotNull(firstChild);
-            Assert.NotEmpty(firstChild.Output);
-            _testOutput.WriteLine($"Command executed with output: {string.Join(", ", firstChild.Output)}");
+            Assert.NotEmpty(textio.Output);
+            _testOutput.WriteLine($"Command executed with output: {string.Join(", ", textio.Output)}");
         }
 
         [Fact]
@@ -124,16 +122,15 @@ namespace Xcaciv.Command.Tests
             var controller = new CommandController(new Crawler(), @"..\..\..\..\..");
             controller.AddPackageDirectory(commandPackageDir);
             controller.LoadCommands(string.Empty);
-            var env = new EnvironmentContext();
+            var env = new ControllerEnvironmentContext();
             var textio = new TestTextIo();
 
             // Act - Execute a sub-command
             await controller.Run("do echo secure test", textio, env);
-            var firstChild = textio.Children.FirstOrDefault();
 
             // Assert
-            Assert.NotNull(firstChild);
-            Assert.Contains("secure test", firstChild.Output);
+            Assert.NotEmpty(textio.Output);
+            Assert.Contains("secure test", textio.Output);
         }
 
         [Fact]
@@ -148,9 +145,9 @@ namespace Xcaciv.Command.Tests
             controller.RegisterBuiltInCommands();
 
             // Assert - Both plugin and default commands should be loaded
-            var env = new EnvironmentContext();
+            var env = new ControllerEnvironmentContext();
             var textio = new TestTextIo();
-            await controller.GetHelpAsync(string.Empty, textio, env);
+            await controller.Run("HELP", textio, env);
             var output = textio.ToString();
 
             Assert.Contains("ECHO", output); // Plugin command
@@ -164,7 +161,7 @@ namespace Xcaciv.Command.Tests
             var controller = new CommandController(new Crawler(), @"..\..\..\..\..");
             controller.AddPackageDirectory(commandPackageDir);
             controller.LoadCommands(string.Empty);
-            var env = new EnvironmentContext();
+            var env = new ControllerEnvironmentContext();
             var textio = new TestTextIo();
 
             // Act - Execute a pipeline
