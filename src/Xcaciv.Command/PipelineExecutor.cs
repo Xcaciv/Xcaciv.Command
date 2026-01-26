@@ -45,7 +45,7 @@ public class PipelineExecutor : IPipelineExecutor
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        var (tasks, outputChannel, lastStageCommand) = await CreatePipelineStages(commandLine, ioContext, environmentContext, executeCommand, cancellationToken).ConfigureAwait(false);
+        var (tasks, outputChannel) = await CreatePipelineStages(commandLine, ioContext, environmentContext, executeCommand, cancellationToken).ConfigureAwait(false);
 
         var allStagesTask = Task.WhenAll(tasks);
         var cancellationWaitTask = Task.Delay(Timeout.Infinite, cancellationToken);
@@ -70,7 +70,7 @@ public class PipelineExecutor : IPipelineExecutor
         await CollectPipelineOutput(outputChannel, ioContext, cancellationToken).ConfigureAwait(false);
     }
 
-    private async Task<(List<Task> tasks, Channel<IResult<string>>? outputChannel, string lastStageCommand)> CreatePipelineStages(
+    private async Task<(List<Task> tasks, Channel<IResult<string>>? outputChannel)> CreatePipelineStages(
         string commandLine,
         IIoContext ioContext,
         IControllerEnvironmentContext environmentContext,
@@ -121,7 +121,7 @@ public class PipelineExecutor : IPipelineExecutor
             currentStage++;
         }
 
-        return (tasks, pipeChannel, LastStageCommand);
+        return (tasks, pipeChannel);
     }
 
     private Task RunStageAsync(
