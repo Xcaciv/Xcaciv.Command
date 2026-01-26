@@ -85,6 +85,7 @@ public class PipelineExecutor : IPipelineExecutor
         var totalStages = commands.Length;
         var currentStage = 1;
 
+        IEnvironmentContext childEnvironmentContext;
         foreach (var command in commands)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -108,11 +109,16 @@ public class PipelineExecutor : IPipelineExecutor
             });
             childIoContext.SetOutputPipe(pipeChannel.Writer);
 
-            var childEnvironmentContext = await environmentContext.GetChild(commandName);
-            tasks.Add(RunStageAsync(commandName, childIoContext, childEnvironmentContext, executeCommand, Configuration, cancellationToken));
-            if (childEnvironmentContext.HasChanged)
+            childEnvironmentContext = await environmentContext.GetChild(commandName);
+            tasks.Add(ExecuteStageAsync());
+
+            async Task ExecuteStageAsync()
             {
-                environmentContext.UpdateEnvironment(childEnvironmentContext.GetEnvironment(), commandName);
+                await RunStageAsync(commandName, childIoContext, childEnvironmentContext, executeCommand, Configuration, cancellationToken).ConfigureAwait(false);
+                if (childEnvironmentContext.HasChanged)
+                {
+                    environmentContext.UpdateEnvironment(childEnvironmentContext.GetEnvironment(), commandName);
+                }
             }
 
             // track last stage info for potential global reintegration
@@ -178,7 +184,7 @@ public class PipelineExecutor : IPipelineExecutor
                         {
                             // Stage cancelled but no timeout configured - treat as error
                             await childContext.AddTraceMessage($"Pipeline stage cancelled unexpectedly: {commandName}").ConfigureAwait(false);
-                            await childContext.Complete($"Stage '{commandName}' was cancelled").ConfigureAwait(false);
+                            await childContext.Complete($"Stage '{commandName}' was cancelled"). ConfigureAwait(false);
                         }
                     }
                     else
