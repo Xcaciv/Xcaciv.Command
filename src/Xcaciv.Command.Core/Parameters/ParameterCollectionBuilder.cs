@@ -10,14 +10,17 @@ namespace Xcaciv.Command.Core.Parameters;
 public class ParameterCollectionBuilder
 {
     private readonly IParameterConverter _converter;
+    private readonly IParameterValueFactory _parameterValueFactory;
 
     /// <summary>
     /// Creates a new parameter collection builder.
     /// </summary>
     /// <param name="converter">The converter to use for type conversion. Defaults to DefaultParameterConverter.</param>
-    public ParameterCollectionBuilder(IParameterConverter? converter = null)
+    /// <param name="parameterValueFactory">Factory for creating parameter values. Defaults to non-caching factory.</param>
+    public ParameterCollectionBuilder(IParameterConverter? converter = null, IParameterValueFactory? parameterValueFactory = null)
     {
         _converter = converter ?? new DefaultParameterConverter();
+        _parameterValueFactory = parameterValueFactory ?? new ParameterValueFactory();
     }
 
     /// <summary>
@@ -102,6 +105,6 @@ public class ParameterCollectionBuilder
     private IParameterValue CreateParameterValue(string name, string rawValue, Type targetType)
     {
         var convertedValue = _converter.ValidateAndConvert(name, rawValue, targetType, out var validationError, out var isValid);
-        return ParameterValue.Create(name, rawValue, convertedValue, targetType, isValid, validationError);
+        return _parameterValueFactory.Create(name, rawValue, convertedValue, targetType, isValid, validationError);
     }
 }

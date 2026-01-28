@@ -221,8 +221,9 @@ public class ParameterValueTests
 
     private IParameterValue CreateParameterValue(string name, string rawValue, Type targetType)
     {
+        var factory = new ParameterValueFactory();
         var convertedValue = _converter.ValidateAndConvert(name, rawValue, targetType, out var validationError, out var isValid);
-        return ParameterValue.Create(name, rawValue, convertedValue, targetType, isValid, validationError);
+        return factory.Create(name, rawValue, convertedValue, targetType, isValid, validationError);
     }
 }
 
@@ -301,8 +302,9 @@ public class ParameterCollectionTests
 
     private IParameterValue CreateParameterValue(string name, string rawValue, Type targetType)
     {
+        var factory = new ParameterValueFactory();
         var convertedValue = _converter.ValidateAndConvert(name, rawValue, targetType, out var validationError, out var isValid);
-        return ParameterValue.Create(name, rawValue, convertedValue, targetType, isValid, validationError);
+        return factory.Create(name, rawValue, convertedValue, targetType, isValid, validationError);
     }
 }
 
@@ -465,7 +467,8 @@ public class ParameterValueTypeConsistencyTests
 
     private IParameterValue CreateParameterValue(string name, string rawValue, Type targetType)
     {
+        var factory = new ParameterValueFactory();
         var convertedValue = _converter.ValidateAndConvert(name, rawValue, targetType, out var validationError, out var isValid);
-        return ParameterValue.Create(name, rawValue, convertedValue, targetType, isValid, validationError);
+        return factory.Create(name, rawValue, convertedValue, targetType, isValid, validationError);
     }
 }
