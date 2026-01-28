@@ -140,18 +140,19 @@ namespace Xcaciv.Command.Core
         /// complete the output pipe
         /// </summary>
         /// <returns></returns>
-        public ValueTask DisposeAsync()
+        public async ValueTask DisposeAsync()
         {
-            Complete().Wait();
-            return ValueTask.CompletedTask;
+            await Complete().ConfigureAwait(false);
         }
 
-        public Task Complete(string? message = null)
+        public async Task Complete(string? message = null)
         {
-            if (!string.IsNullOrEmpty(message)) SetStatusMessage(message).Wait();
+            if (!string.IsNullOrEmpty(message))
+            {
+                await SetStatusMessage(message).ConfigureAwait(false);
+            }
 
             outputPipe?.TryComplete();
-            return Task.CompletedTask;
         }
 
         public void SetTraceLog(string logName)
