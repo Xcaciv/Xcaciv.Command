@@ -1,37 +1,26 @@
 using System;
 using System.Collections.Concurrent;
-using System.Linq;
-using System.Text.RegularExpressions;
+using Xcaciv.Command.Interface;
 
-namespace Xcaciv.Command.Interface;
+namespace Xcaciv.Command.Core.Parameters;
 
 /// <summary>
-/// Caching implementation of command name validation with thread-safe cache for improved performance.
+/// Caching wrapper for NamesValidator that provides thread-safe cache for improved performance.
+/// Delegates all parsing logic to NamesValidator while adding a caching layer.
 /// Use this variant when executing high volumes of commands with repeated patterns.
 /// Memory overhead: ~20-50 KB for cache (bounded to 1000 entries).
 /// </summary>
 public static class NamesValidatorCaching
 {
     /// <summary>
-    /// Regex for cleansing command names - only allows alphanumeric, dashes, underscores, and spaces
-    /// </summary>
-    private static readonly Regex InvalidCommandChars = new Regex(@"[^-_\da-zA-Z ]+", RegexOptions.Compiled);
-    
-    /// <summary>
-    /// Regex for cleansing parameters
-    /// </summary>
-    private static readonly Regex InvalidParameterChars = new Regex(@"[^-_\da-zA-Z .*?\[\]|""~!@#$%^&*\(\)]+", RegexOptions.Compiled);
-
-    /// <summary>
-    /// Thread-safe cache for validated command names to avoid repeated regex operations.
+    /// Thread-safe cache for validated command names to avoid repeated parsing operations.
     /// Key format: "{commandLine}|{upper}" to handle both case variants.
     /// </summary>
     private static readonly ConcurrentDictionary<string, string> ValidatedNameCache = new();
 
     /// <summary>
     /// Parses and validates a command name from a command line with caching.
-    /// Extracts the first word, removes invalid characters, and normalizes case.
-    /// Uses caching to avoid repeated regex operations for common command names.
+    /// Delegates actual parsing to NamesValidator and caches the result.
     /// </summary>
     /// <param name="commandLine">Full command line text</param>
     /// <param name="upper">If true, converts to uppercase; if false, converts to lowercase</param>
@@ -45,17 +34,8 @@ public static class NamesValidatorCaching
             return cachedResult;
         }
 
-        // Slow path: perform validation and cache result
-        commandLine = commandLine.Trim();
-        var commandText = (commandLine.Contains(' ') ?
-                commandLine.Substring(0, commandLine.Trim().IndexOf(' '))
-                 : commandLine).Trim('-');
-        
-        // remove invalid characters
-        commandText = InvalidCommandChars.Replace(commandText.Trim(), "");
-        
-        // set proper case
-        var result = upper ? commandText.ToUpper() : commandText.ToLower();
+        // Slow path: delegate to NamesValidator for actual parsing
+        var result = NamesValidator.GetValidCommandName(commandLine, upper);
         
         // Cache result (bounded: max 1000 entries to prevent unbounded growth)
         if (ValidatedNameCache.Count < 1000)
@@ -68,19 +48,15 @@ public static class NamesValidatorCaching
 
     /// <summary>
     /// Parses arguments from a command line, excluding the command name itself.
-    /// Handles quoted strings and special characters.
+    /// Delegates to NamesValidator for actual parsing - no caching for arguments as they vary widely.
     /// </summary>
     /// <param name="commandLine">Full command line text</param>
     /// <returns>Array of arguments (command name is excluded)</returns>
     public static string[] GetArgumentsFromCommandline(string commandLine)
     {
-        var args = Regex.Matches(commandLine, @"[\""].*?[\""]|[\w-]+")
-            .Cast<Match>()
-            .Select(o => InvalidParameterChars.Replace(o.Value, "").Trim('"'))
-            .ToArray();
-
-        // the first item in the array is the command
-        return args.Skip(1).ToArray();
+        // Delegate directly to NamesValidator - argument parsing results are typically unique
+        // and don't benefit from caching due to low hit rate
+        return NamesValidator.GetArgumentsFromCommandline(commandLine);
     }
 
     /// <summary>
