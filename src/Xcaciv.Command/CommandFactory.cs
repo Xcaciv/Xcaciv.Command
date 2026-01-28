@@ -50,13 +50,13 @@ public class CommandFactory : ICommandFactory
             if (commandDescription.SubCommands.TryGetValue(subCommandKey, out var subCommandDescription) &&
                 subCommandDescription != null)
             {
-                // SetParameters is synchronous (returns Task.CompletedTask) per AbstractTextIo implementation.
-                // Use GetAwaiter().GetResult() safely since task is already completed.
+                // SetParameters typically completes synchronously (returns Task.CompletedTask)
+                // for current AbstractTextIo implementations.
                 var setParamsTask = ioContext.SetParameters(ioContext.Parameters[1..]);
                 if (!setParamsTask.IsCompleted)
                 {
-                    // Fallback: if implementation is truly async, wait synchronously
-                    // This maintains backward compatibility but logs the anomaly
+                    // Fallback: if an implementation is truly async, wait synchronously to
+                    // preserve existing synchronous factory semantics.
                     setParamsTask.ConfigureAwait(false).GetAwaiter().GetResult();
                 }
                 return CreateCommand(subCommandDescription.FullTypeName, commandDescription.PackageDescription.FullPath);
