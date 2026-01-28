@@ -169,7 +169,7 @@ namespace Xcaciv.Command.Core
         {
             if (Verbose)
             {
-                return OutputChunk(CommandResult<string>.Success("\tTRACE: " + message));
+                return OutputChunk(CommandResult<string>.Success($"\tTRACE: {message}"));
             }
             // if we are not verbose, send the output to DEBUG
             Trace.WriteLine(message);

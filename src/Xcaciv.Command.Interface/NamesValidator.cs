@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Concurrent;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace Xcaciv.Command.Interface;
@@ -19,24 +22,47 @@ public static class NamesValidator
     private static readonly Regex InvalidParameterChars = new Regex(@"[^-_\da-zA-Z .*?\[\]|""~!@#$%^&*\(\)]+", RegexOptions.Compiled);
 
     /// <summary>
+    /// Thread-safe cache for validated command names to avoid repeated regex operations.
+    /// Key format: "{commandLine}|{upper}" to handle both case variants.
+    /// </summary>
+    private static readonly ConcurrentDictionary<string, string> ValidatedNameCache = new();
+
+    /// <summary>
     /// Parses and validates a command name from a command line.
     /// Extracts the first word, removes invalid characters, and normalizes case.
+    /// Uses caching to avoid repeated regex operations for common command names.
     /// </summary>
     /// <param name="commandLine">Full command line text</param>
     /// <param name="upper">If true, converts to uppercase; if false, converts to lowercase</param>
     /// <returns>Validated and normalized command name</returns>
     public static string GetValidCommandName(string commandLine, bool upper = true)
     {
+        // Fast path: check cache first
+        var cacheKey = $"{commandLine}|{upper}";
+        if (ValidatedNameCache.TryGetValue(cacheKey, out var cachedResult))
+        {
+            return cachedResult;
+        }
+
+        // Slow path: perform validation and cache result
         commandLine = commandLine.Trim();
         var commandText = (commandLine.Contains(' ') ?
                 commandLine.Substring(0, commandLine.Trim().IndexOf(' '))
                  : commandLine).Trim('-');
+        
         // remove invalid characters
         commandText = InvalidCommandChars.Replace(commandText.Trim(), "");
+        
         // set proper case
-        return upper ?
-            commandText.ToUpper() :
-            commandText.ToLower();
+        var result = upper ? commandText.ToUpper() : commandText.ToLower();
+        
+        // Cache result (bounded: max 1000 entries to prevent unbounded growth)
+        if (ValidatedNameCache.Count < 1000)
+        {
+            ValidatedNameCache.TryAdd(cacheKey, result);
+        }
+        
+        return result;
     }
 
     /// <summary>
