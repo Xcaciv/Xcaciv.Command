@@ -15,14 +15,17 @@ namespace Xcaciv.Command.Core;
 public class CommandParameters
 {
     private readonly IParameterConverter _converter;
+    private readonly IParameterValueFactory _parameterValueFactory;
 
     /// <summary>
     /// Initializes a new instance of the CommandParameters class.
     /// </summary>
     /// <param name="converter">The parameter converter to use for type validation and conversion. If null, uses DefaultParameterConverter.</param>
-    public CommandParameters(IParameterConverter? converter = null)
+    /// <param name="parameterValueFactory">Factory for creating parameter values. If null, uses default non-caching factory.</param>
+    public CommandParameters(IParameterConverter? converter = null, IParameterValueFactory? parameterValueFactory = null)
     {
         _converter = converter ?? new DefaultParameterConverter();
+        _parameterValueFactory = parameterValueFactory ?? new ParameterValueFactory();
     }
 
     /// <summary>
@@ -115,12 +118,12 @@ public class CommandParameters
     }
 
     /// <summary>
-    /// Helper method to create a ParameterValue using the converter.
+    /// Helper method to create a ParameterValue using the converter and factory.
     /// </summary>
     private IParameterValue CreateParameterValue(string name, string rawValue, Type targetType)
     {
         var convertedValue = _converter.ValidateAndConvert(name, rawValue, targetType, out var validationError, out var isValid);
-        return ParameterValue.Create(name, rawValue, convertedValue, targetType, isValid, validationError);
+        return _parameterValueFactory.Create(name, rawValue, convertedValue, targetType, isValid, validationError);
     }
 
     /// <summary>

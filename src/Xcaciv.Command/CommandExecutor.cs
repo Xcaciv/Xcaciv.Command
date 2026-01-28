@@ -90,7 +90,7 @@ public class CommandExecutor : ICommandExecutor
             if (description.SubCommands.Count > 0 && string.IsNullOrEmpty(description.FullTypeName))
             {
                 var firstSubCommand = description.SubCommands.First().Value;
-                var commandInstance = _commandFactory.CreateCommand(firstSubCommand, context);
+                var commandInstance = await _commandFactory.CreateCommandAsync(firstSubCommand, context).ConfigureAwait(false);
                 var commandType = commandInstance.GetType();
 
                 if (Attribute.GetCustomAttribute(commandType, typeof(CommandRootAttribute)) is CommandRootAttribute rootAttribute)
@@ -124,7 +124,7 @@ public class CommandExecutor : ICommandExecutor
                 {
                     // This is a root command - show the root description and all subcommands
                     var firstSubCommand = description.SubCommands.First().Value;
-                    var commandInstance = _commandFactory.CreateCommand(firstSubCommand, context);
+                    var commandInstance = await _commandFactory.CreateCommandAsync(firstSubCommand, context).ConfigureAwait(false);
                     var commandType = commandInstance.GetType();
 
                     if (Attribute.GetCustomAttribute(commandType, typeof(CommandRootAttribute)) is CommandRootAttribute rootAttribute)
@@ -145,7 +145,7 @@ public class CommandExecutor : ICommandExecutor
                 else
                 {
                     // Regular command with a type - show detailed help
-                    var commandInstance = _commandFactory.CreateCommand(description, context);
+                    var commandInstance = await _commandFactory.CreateCommandAsync(description, context).ConfigureAwait(false);
                     var helpText = _helpService.BuildHelp(commandInstance, context.Parameters, env);
                     await context.OutputChunk(CommandResult<string>.Success(helpText)).ConfigureAwait(false);
                 }
@@ -181,7 +181,7 @@ public class CommandExecutor : ICommandExecutor
         {
             await ioContext.AddTraceMessage($"ExecuteCommand: {commandKey} Start.").ConfigureAwait(false);
 
-            var commandInstance = _commandFactory.CreateCommand(commandDescription, ioContext);
+            var commandInstance = await _commandFactory.CreateCommandAsync(commandDescription, ioContext).ConfigureAwait(false);
 
             await using (var childEnv = await environmentContext.GetChild().ConfigureAwait(false))
             {

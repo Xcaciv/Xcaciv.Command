@@ -1,10 +1,13 @@
+using System;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace Xcaciv.Command.Interface;
 
 /// <summary>
 /// Utility class for validating and parsing command names and arguments.
-/// Provides centralized command name normalization logic.
+/// Provides centralized command name normalization logic without caching.
+/// For caching implementation, see NamesValidatorCaching.
 /// </summary>
 public static class NamesValidator
 {
@@ -31,12 +34,12 @@ public static class NamesValidator
         var commandText = (commandLine.Contains(' ') ?
                 commandLine.Substring(0, commandLine.Trim().IndexOf(' '))
                  : commandLine).Trim('-');
+        
         // remove invalid characters
         commandText = InvalidCommandChars.Replace(commandText.Trim(), "");
+        
         // set proper case
-        return upper ?
-            commandText.ToUpper() :
-            commandText.ToLower();
+        return upper ? commandText.ToUpper() : commandText.ToLower();
     }
 
     /// <summary>
