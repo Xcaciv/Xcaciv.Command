@@ -99,5 +99,11 @@ namespace Xcaciv.Command.Interface
         /// Set the audit logger for this environment context
         /// </summary>
         void SetAuditLogger(IAuditLogger auditLogger);
+
+        /// <summary>
+        /// return all command environment names
+        /// </summary>
+        /// <returns></returns>
+        List<string> GetCommandEnvironmentNames();
     }
 }

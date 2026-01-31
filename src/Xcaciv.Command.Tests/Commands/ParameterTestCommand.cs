@@ -59,7 +59,7 @@ namespace Xcaciv.Command.Tests.Commands
         /// Override ProcessParameters to use the constructor-provided attributes instead of reflection.
         /// This allows tests to inject custom parameter definitions without using actual attributes on the class.
         /// </summary>
-        public new Dictionary<string, IParameterValue> ProcessParameters(string[] parameters, bool hasPipedInput = false)
+        public Dictionary<string, IParameterValue> ProcessParameters(string[] parameters, bool hasPipedInput = false)
         {
             if (parameters.Length == 0)
             {
