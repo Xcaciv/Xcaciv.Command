@@ -16,17 +16,12 @@ namespace Xcaciv.Command
         public IControllerEnvironmentContext LoadControllerEnvironmentFromFile(string filePath)
         {
             var envFile = LoadEnvironmentFile(filePath);
-            if (envFile != null)
+            var env = new ControllerEnvironmentContext(new EnvironmentContext(envFile.Global));
+            foreach (var (key, item) in envFile.CommandEnvironments)
             {
-                var env = new ControllerEnvironmentContext(new EnvironmentContext(envFile.Global));
-                foreach (var (key, item) in envFile.CommandEnvironments)
-                {
-                    env.UpdateEnvironment(item, key);
-                }
-                return env;
+                env.UpdateEnvironment(item, key);
             }
-
-            return new ControllerEnvironmentContext();
+            return env;
         }
     }
 }
