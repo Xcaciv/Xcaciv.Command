@@ -103,7 +103,7 @@ namespace Xcaciv.Command.Interface
         /// <summary>
         /// return all command environment names
         /// </summary>
-        /// <returns></returns>
+        /// <returns>A list of strings containing the names of all registered command environments.</returns>
         List<string> GetCommandEnvironmentNames();
     }
 }
