@@ -100,7 +100,7 @@ namespace Xcaciv.Command.FileLoader
             if (!absolutePath.EndsWith(".yaml", StringComparison.OrdinalIgnoreCase) &&
                 !absolutePath.EndsWith(".yml", StringComparison.OrdinalIgnoreCase))
             {
-                absolutePath += ".yaml";
+                absolutePath += ".yml";
             }
 
             fileSystem.File.WriteAllText(absolutePath, yaml, Encoding.UTF8);
@@ -126,7 +126,7 @@ namespace Xcaciv.Command.FileLoader
                 if (!absolutePath.EndsWith(".yaml", StringComparison.OrdinalIgnoreCase) &&
                     !absolutePath.EndsWith(".yml", StringComparison.OrdinalIgnoreCase))
                 {
-                    absolutePath += ".yaml";
+                    absolutePath += ".yml";
                 }
                 var yaml = fileSystem.File.ReadAllText(absolutePath, Encoding.UTF8);
 
