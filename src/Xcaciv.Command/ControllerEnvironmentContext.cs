@@ -42,7 +42,7 @@ namespace Xcaciv.Command
         /// <summary>
         /// Gets or sets the name of the controller environment.
         /// </summary>
-        public string Name {  get; set; } = "Controller Envirnonment";
+        public string Name {  get; set; } = "Controller Environment";
         /// <summary>
         /// Gets or sets the unique identifier of the parent element, if any.
         /// </summary>
