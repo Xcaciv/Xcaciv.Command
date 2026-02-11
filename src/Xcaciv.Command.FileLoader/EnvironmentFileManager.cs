@@ -81,12 +81,19 @@ namespace Xcaciv.Command.FileLoader
         /// </summary>
         /// <remarks>The method serializes the provided environment file to YAML format and writes it to
         /// the specified file path. It ensures that the file name ends with a '.yaml' extension.</remarks>
-        /// <param name="filePath">The path where the environment file will be saved. The path must be valid and should not be null. If the
-        /// path does not end with '.yaml' or '.yml', '.yaml' will be appended automatically.</param>
+        /// <param name="filePath">The path where the environment file will be saved. The path must be a fully qualified absolute path. 
+        /// Relative paths are not allowed.</param>
         /// <param name="envFile">The environment file object to be serialized and saved. This object contains the configuration settings that
         /// need to be persisted.</param>
+        /// <exception cref="ArgumentException">Thrown when the provided file path is relative instead of absolute.</exception>
         private void SaveEnvironmentFile(string filePath, EnvironmentFile envFile)
         {
+            // validate that the path is absolute, not relative
+            if (!fileSystem.Path.IsPathFullyQualified(filePath))
+            {
+                throw new ArgumentException("Relative file paths are not allowed. Please provide an absolute file path.", nameof(filePath));
+            }
+
             // serialize to YAML and write to file
             var serializer = new SerializerBuilder()
                 .WithNamingConvention(CamelCaseNamingConvention.Instance)
@@ -94,16 +101,14 @@ namespace Xcaciv.Command.FileLoader
 
             var yaml = serializer.Serialize(envFile);
 
-            // get absolute path
-            var absolutePath = fileSystem.Path.GetFullPath(filePath);
             // ensure file name ends with .yaml or .yml
-            if (!absolutePath.EndsWith(".yaml", StringComparison.OrdinalIgnoreCase) &&
-                !absolutePath.EndsWith(".yml", StringComparison.OrdinalIgnoreCase))
+            if (!filePath.EndsWith(".yaml", StringComparison.OrdinalIgnoreCase) &&
+                !filePath.EndsWith(".yml", StringComparison.OrdinalIgnoreCase))
             {
-                absolutePath += ".yml";
+                filePath += ".yml";
             }
 
-            fileSystem.File.WriteAllText(absolutePath, yaml, Encoding.UTF8);
+            fileSystem.File.WriteAllText(filePath, yaml, Encoding.UTF8);
         }
 
         /// <summary>
