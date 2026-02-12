@@ -58,7 +58,7 @@ namespace Xcaciv.Command.UnitTests
 
             // Assert
             Assert.NotEqual(Guid.Empty, context.Id);
-            Assert.Equal("Controller Envirnonment", context.Name);
+            Assert.Equal("Controller Environment", context.Name);
             Assert.Null(context.Parent);
         }
 
@@ -325,7 +325,7 @@ namespace Xcaciv.Command.UnitTests
             var context = new ControllerEnvironmentContext();
 
             // Assert
-            Assert.Equal("Controller Envirnonment", context.Name);
+            Assert.Equal("Controller Environment", context.Name);
         }
 
         /// <summary>
@@ -2460,8 +2460,8 @@ namespace Xcaciv.Command.UnitTests
 
             // Assert
             Assert.NotEqual(context1.Id, context2.Id);
-            Assert.Equal("Controller Envirnonment", context1.Name);
-            Assert.Equal("Controller Envirnonment", context2.Name);
+            Assert.Equal("Controller Environment", context1.Name);
+            Assert.Equal("Controller Environment", context2.Name);
         }
     }
 }
