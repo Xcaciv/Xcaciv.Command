@@ -25,6 +25,11 @@
 	</ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Xcaciv.Command.Core\Xcaciv.Command.Core.csproj" />
+    <ProjectReference Include="..\..\Xcaciv.Command.Extensions.Commandline\Xcaciv.Command.Extensions.Commandline.csproj" />
+    <ProjectReference Include="..\..\Xcaciv.Command.FileLoader\Xcaciv.Command.FileLoader.csproj" />
+    <ProjectReference Include="..\..\Xcaciv.Command.Interface\Xcaciv.Command.Interface.csproj" />
+    <ProjectReference Include="..\..\Xcaciv.Command\Xcaciv.Command.csproj" />
     <ProjectReference Include="..\Xcaciv.Command.FileLoader\Xcaciv.Command.FileLoader.csproj" />
     <ProjectReference Include="..\Xcaciv.Command.Interface\Xcaciv.Command.Interface.csproj" />
     <ProjectReference Include="..\Xcaciv.Command\Xcaciv.Command.csproj" />

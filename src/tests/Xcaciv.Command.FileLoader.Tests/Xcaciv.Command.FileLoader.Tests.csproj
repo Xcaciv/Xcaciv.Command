@@ -21,7 +21,7 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Xcaciv.Command.FileLoader\Xcaciv.Command.FileLoader.csproj" />
+    <ProjectReference Include="..\..\Xcaciv.Command.FileLoader\Xcaciv.Command.FileLoader.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Compile Update="Resource1.Designer.cs">
