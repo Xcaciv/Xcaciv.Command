@@ -14,7 +14,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Xcaciv.Command.FileLoader",
 		{1D54A8C6-1E92-4B5B-9EBB-147839480D73} = {1D54A8C6-1E92-4B5B-9EBB-147839480D73}
 	EndProjectSection
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Xcaciv.Command.FileLoaderTests", "src\Xcaciv.Command.FileLoaderTests\Xcaciv.Command.FileLoaderTests.csproj", "{9B087B2C-5852-4B56-B213-727CB6048784}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Xcaciv.Command.FileLoader.Tests", "src\tests\Xcaciv.Command.FileLoader.Tests\Xcaciv.Command.FileLoader.Tests.csproj", "{9B087B2C-5852-4B56-B213-727CB6048784}"
 	ProjectSection(ProjectDependencies) = postProject
 		{1D54A8C6-1E92-4B5B-9EBB-147839480D73} = {1D54A8C6-1E92-4B5B-9EBB-147839480D73}
 	EndProjectSection
@@ -32,12 +32,12 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		README.md = README.md
 	EndProjectSection
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "zTestCommandPackage", "src\zTestCommandPackage\zTestCommandPackage.csproj", "{B062C312-8C65-45E6-AF49-0692502DA605}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "zTestCommandPackage", "src\tests\zTestCommandPackage\zTestCommandPackage.csproj", "{B062C312-8C65-45E6-AF49-0692502DA605}"
 	ProjectSection(ProjectDependencies) = postProject
 		{1D54A8C6-1E92-4B5B-9EBB-147839480D73} = {1D54A8C6-1E92-4B5B-9EBB-147839480D73}
 	EndProjectSection
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Xcaciv.Command.Tests", "src\Xcaciv.Command.Tests\Xcaciv.Command.Tests.csproj", "{1AA7D848-7F82-4190-8CB8-FDE32B74B0E7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Xcaciv.Command.Tests", "src\tests\Xcaciv.Command.Tests\Xcaciv.Command.Tests.csproj", "{1AA7D848-7F82-4190-8CB8-FDE32B74B0E7}"
 	ProjectSection(ProjectDependencies) = postProject
 		{1D54A8C6-1E92-4B5B-9EBB-147839480D73} = {1D54A8C6-1E92-4B5B-9EBB-147839480D73}
 	EndProjectSection
@@ -57,9 +57,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Xcaciv.Command.Extensions.C
 		{1D54A8C6-1E92-4B5B-9EBB-147839480D73} = {1D54A8C6-1E92-4B5B-9EBB-147839480D73}
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BenchmarkSuite1", "BenchmarkSuite1\BenchmarkSuite1.csproj", "{A20861A9-411E-6150-BF5C-69E8196E5D22}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BenchmarkSuite1", "src\tests\BenchmarkSuite1\BenchmarkSuite1.csproj", "{A20861A9-411E-6150-BF5C-69E8196E5D22}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Xcaciv.Command.Core.UnitTests", "tests\Xcaciv.Command.Core.UnitTests\Xcaciv.Command.Core.UnitTests.csproj", "{71402B99-FCDC-4F65-BDD2-D4F95D876E54}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Xcaciv.Command.Core.Tests", "src\tests\Xcaciv.Command.Core.Tests\Xcaciv.Command.Core.Tests.csproj", "{71402B99-FCDC-4F65-BDD2-D4F95D876E54}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
