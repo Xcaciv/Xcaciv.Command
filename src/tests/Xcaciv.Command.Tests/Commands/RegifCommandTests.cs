@@ -62,7 +62,7 @@ namespace Xcaciv.Command.Tests.Commands
         }
 
         [Fact()]
-         public async Task HandleExecutionWithSetTestAsync()
+        public async Task HandleExecutionWithSetTestAsync()
         {
             var commands = new CommandController(new Crawler(), @"..\..\..\..\..\");
             commands.AddPackageDirectory(commandPackageDir);

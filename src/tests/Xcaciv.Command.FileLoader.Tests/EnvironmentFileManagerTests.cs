@@ -657,7 +657,7 @@ commandEnvironments:
             return new Dictionary<string, string>(_globalEnvironment);
         }
 
-        public Dictionary<string, string> GetEnvironment(string commandName)
+        public Dictionary<string, string> GetEnvironment(string commandName, bool prefix = true)
         {
             return _commandEnvironments.TryGetValue(commandName, out var env) 
                 ? new Dictionary<string, string>(env) 

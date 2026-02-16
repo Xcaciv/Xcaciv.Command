@@ -253,8 +253,8 @@ public class CommandController : Interface.ICommandController
 
             if (controllerEnvironmentChild.HasChanged && _commandRegistry.TryGetCommand(lastCommandName, out var commandDesc) && commandDesc?.ModifiesEnvironment == true)
             {
-                env.UpdateEnvironment(controllerEnvironmentChild.GetEnvironment());
-                env.UpdateEnvironment(controllerEnvironmentChild.GetEnvironment(lastCommandName), lastCommandName);
+                var modifiedEnv = controllerEnvironmentChild.GetEnvironment(lastCommandName, false);
+                env.UpdateEnvironment(modifiedEnv);
             }
         }
         else
@@ -265,9 +265,18 @@ public class CommandController : Interface.ICommandController
 
             var childEnv = await env.GetChild(commandName).ConfigureAwait(false);
             await ExecuteCommandInternal(commandName, ioContext, childEnv, cancellationToken).ConfigureAwait(false);
-            if (childEnv.HasChanged && _commandRegistry.TryGetCommand(commandName, out var commandDesc) && commandDesc?.ModifiesEnvironment == true)
+            if (childEnv.HasChanged && _commandRegistry.TryGetCommand(commandName, out var commandDesc))
             {
-                env.UpdateEnvironment(childEnv.GetEnvironment(), commandName);
+                // if this is a special command, it can update global values
+                if (commandDesc?.ModifiesEnvironment == true)
+                {
+                    env.UpdateEnvironment(childEnv.GetEnvironment());
+                }
+                else
+                {
+                    // only allow commands to update their own environment values
+                    env.UpdateEnvironment(childEnv.GetEnvironment(), commandName);
+                }
             }
         }
     }
