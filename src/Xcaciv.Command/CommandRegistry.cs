@@ -83,4 +83,59 @@ public class CommandRegistry : ICommandRegistry
     {
         return new List<ICommandDescription>(_commands.Values);
     }
+
+    /// <inheritdoc />
+    public IControllerEnvironmentContext GetEnvironment(ICommandFactory commandFactory)
+    {
+        ArgumentNullException.ThrowIfNull(commandFactory);
+
+        var controllerEnvironment = new ControllerEnvironmentContext();
+        foreach (var commandDescription in GetAllCommands())
+        {
+            ApplyDefaultEnvironment(controllerEnvironment, commandDescription, commandFactory);
+        }
+
+        return controllerEnvironment;
+    }
+
+    private static void ApplyDefaultEnvironment(IControllerEnvironmentContext controllerEnvironment, ICommandDescription commandDescription, ICommandFactory commandFactory, int depth = 0)
+    {
+        depth++;
+
+        if (!string.IsNullOrWhiteSpace(commandDescription.FullTypeName))
+        {
+            AddCommandDefaults(controllerEnvironment, commandDescription, commandFactory);
+        }
+
+        if (commandDescription.SubCommands.Count == 0)
+        {
+            return;
+        }
+
+        if (depth > 1) return;
+        foreach (var subCommand in commandDescription.SubCommands.Values)
+        {
+            AddCommandDefaults(controllerEnvironment, subCommand, commandFactory);
+        }
+    }
+
+    private static void AddCommandDefaults(IControllerEnvironmentContext controllerEnvironment, ICommandDescription commandDescription, ICommandFactory commandFactory)
+    {
+        var commandInstance = commandFactory.CreateCommand(commandDescription.FullTypeName, commandDescription.PackageDescription.FullPath);
+        try
+        {
+            var defaultEnvironment = commandInstance.GetDefaultEnvironment();
+            if (defaultEnvironment.Count == 0)
+            {
+                return;
+            }
+
+            var commandName = NamesValidator.GetValidCommandName(commandDescription.BaseCommand);
+            controllerEnvironment.UpdateEnvironment(defaultEnvironment, commandName);
+        }
+        finally
+        {
+            commandInstance.DisposeAsync().AsTask().GetAwaiter().GetResult();
+        }
+    }
 }

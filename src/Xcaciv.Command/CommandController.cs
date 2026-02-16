@@ -312,55 +312,6 @@ public class CommandController : Interface.ICommandController
     /// <returns>An instance of <see cref="IControllerEnvironmentContext"/> representing the default environment context given the commands registered.</returns>
     public IControllerEnvironmentContext GetEnvironment()
     {
-        var controllerEnvironment = new ControllerEnvironmentContext();
-        foreach (var commandDescription in _commandRegistry.GetAllCommands())
-        {
-            ApplyDefaultEnvironment(controllerEnvironment, commandDescription);
-        }
-
-        return controllerEnvironment;
-    }
-
-    private void ApplyDefaultEnvironment(IControllerEnvironmentContext controllerEnvironment, ICommandDescription commandDescription, int depth = 0)
-    {
-        ArgumentNullException.ThrowIfNull(controllerEnvironment);
-        ArgumentNullException.ThrowIfNull(commandDescription);
-        depth++;
-
-        if (!string.IsNullOrWhiteSpace(commandDescription.FullTypeName))
-        {
-            AddCommandDefaults(controllerEnvironment, commandDescription);
-        }
-
-        if (commandDescription.SubCommands.Count == 0)
-        {
-            return;
-        }
-
-        if (depth > 1) return;
-        foreach (var subCommand in commandDescription.SubCommands.Values)
-        {
-            AddCommandDefaults(controllerEnvironment, subCommand);
-        }
-    }
-
-    private void AddCommandDefaults(IControllerEnvironmentContext controllerEnvironment, ICommandDescription commandDescription)
-    {
-        var commandInstance = _commandFactory.CreateCommand(commandDescription.FullTypeName, commandDescription.PackageDescription.FullPath);
-        try
-        {
-            var defaultEnvironment = commandInstance.GetDefaultEnvironment();
-            if (defaultEnvironment.Count == 0)
-            {
-                return;
-            }
-
-            var commandName = NamesValidator.GetValidCommandName(commandDescription.BaseCommand);
-            controllerEnvironment.UpdateEnvironment(defaultEnvironment, commandName);
-        }
-        finally
-        {
-            commandInstance.DisposeAsync().AsTask().GetAwaiter().GetResult();
-        }
+        return _commandRegistry.GetEnvironment(_commandFactory);
     }
 }
