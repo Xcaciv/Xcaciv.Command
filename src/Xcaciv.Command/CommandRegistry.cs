@@ -135,7 +135,12 @@ public class CommandRegistry : ICommandRegistry
         }
         finally
         {
-            commandInstance.DisposeAsync().AsTask().GetAwaiter().GetResult();
+            commandInstance
+                .DisposeAsync()
+                .AsTask()
+                .ConfigureAwait(false)
+                .GetAwaiter()
+                .GetResult();
         }
     }
 }
