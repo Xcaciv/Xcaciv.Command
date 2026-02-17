@@ -243,10 +243,8 @@ namespace Xcaciv.Command
 
             foreach ((var key, var addValue) in dictionary)
             {
-                string? oldValue = null;
                 commandEnvironment.AddOrUpdate(key, addValue, (environmentKey, existingValue) =>
                 {
-                    oldValue = existingValue;
                     Trace.WriteLine($"CommandEnvironment [{commandName}] value {environmentKey} changed from {existingValue} to {addValue}.");
                     return addValue;
                 });
