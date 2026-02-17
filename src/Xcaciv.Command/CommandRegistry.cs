@@ -100,8 +100,6 @@ public class CommandRegistry : ICommandRegistry
 
     private static void ApplyDefaultEnvironment(IControllerEnvironmentContext controllerEnvironment, ICommandDescription commandDescription, ICommandFactory commandFactory, int depth = 0)
     {
-        depth++;
-
         if (!string.IsNullOrWhiteSpace(commandDescription.FullTypeName))
         {
             AddCommandDefaults(controllerEnvironment, commandDescription, commandFactory);
@@ -112,7 +110,6 @@ public class CommandRegistry : ICommandRegistry
             return;
         }
 
-        if (depth > 1) return;
         foreach (var subCommand in commandDescription.SubCommands.Values)
         {
             AddCommandDefaults(controllerEnvironment, subCommand, commandFactory);
