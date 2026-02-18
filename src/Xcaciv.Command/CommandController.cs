@@ -275,7 +275,8 @@ public class CommandController : Interface.ICommandController
                 else
                 {
                     // only allow commands to update their own environment values
-                    env.UpdateEnvironment(childEnv.GetEnvironment(), commandName);
+                    var envUpdate = childEnv.GetEnvironment().Where(x => x.Key.StartsWith(commandName + "_", StringComparison.OrdinalIgnoreCase)).ToDictionary(x => x.Key.Substring(commandName.Length + 1), x => x.Value);
+                    env.UpdateEnvironment(envUpdate, commandName);
                 }
             }
         }

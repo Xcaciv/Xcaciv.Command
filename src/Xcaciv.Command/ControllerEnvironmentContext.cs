@@ -221,8 +221,31 @@ namespace Xcaciv.Command
         /// its corresponding value specifies the new value to apply.</param>
         public void UpdateEnvironment(Dictionary<string, string> dictionary)
         {
-            _environment.UpdateEnvironment(dictionary);
+            var clean = RemoveCommandPrefixedValues(dictionary);
+            _environment.UpdateEnvironment(clean);
         }
+        /// <summary>
+        /// removes any keys from the provided dictionary that are prefixed with a command name, ensuring that only global environment variables are updated.
+        /// </summary>
+        /// <param name="dictionary"></param>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        private Dictionary<string, string> RemoveCommandPrefixedValues(Dictionary<string, string> dictionary)
+        {
+            var commandPrefixes = _commandEnvironment.Keys.Select(commandName => string.Concat(commandName, "_")).ToList();
+            var clean = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var (key, value) in dictionary)
+            {
+                if (commandPrefixes.Any(prefix => key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
+                {
+                    Trace.WriteLine($"Skipping command-prefixed key {key} during global environment update.");
+                    continue;
+                }
+                clean[key] = value;
+            }
+            return clean;
+        }
+
         /// <summary>
         /// Updates environment variables with the specified key-value pairs, either globally or for a specific command.
         /// </summary>
@@ -239,11 +262,16 @@ namespace Xcaciv.Command
                 return;
             }
 
+            var prefix = commandName + "_";
             var commandEnvironment = _commandEnvironment.GetOrAdd(commandName, new ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase));
 
             foreach ((var key, var addValue) in dictionary)
             {
-                commandEnvironment.AddOrUpdate(key, addValue, (environmentKey, existingValue) =>
+                var indexKey = (key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) ?
+                    key.Substring(prefix.Length) :
+                    key;
+                
+                commandEnvironment.AddOrUpdate(indexKey, addValue, (environmentKey, existingValue) =>
                 {
                     Trace.WriteLine($"CommandEnvironment [{commandName}] value {environmentKey} changed from {existingValue} to {addValue}.");
                     return addValue;
