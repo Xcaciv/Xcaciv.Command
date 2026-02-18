@@ -1913,11 +1913,11 @@ namespace Xcaciv.Command.UnitTests
             context.UpdateEnvironment(dictionary, "mycommand");
 
             // Assert
-            var commandEnv = context.GetEnvironment("mycommand", false);
+            var commandEnv = context.GetEnvironment("mycommand");
             Assert.Equal(3, commandEnv.Count);
             Assert.Equal("cmdvalue1", commandEnv["mycommand_VAR1"]);
             Assert.Equal("cmdvalue2", commandEnv["mycommand_VAR2"]);
-            Assert.Equal("sharedvalue", commandEnv["SHARED_VAR"]);
+            Assert.Equal("sharedvalue", commandEnv["mycommand_SHARED_VAR"]);
             mockEnvironment.Verify(e => e.UpdateEnvironment(It.IsAny<Dictionary<string, string>>()), Times.Never);
             Assert.True(context.HasChanged);
         }
@@ -1954,7 +1954,7 @@ namespace Xcaciv.Command.UnitTests
         /// <summary>
         /// Test: UpdateEnvironment creates new command-specific dictionary on first use
         /// Input: dictionary with command-specific variables, command not previously seen
-        /// Expected: New ConcurrentDictionary is created and populated
+        /// Expected: New ConcurrentDictionary is created and populated, removes prefix
         /// </summary>
         [Fact]
         public void UpdateEnvironment_FirstTimeCommandName_CreatesNewCommandDictionary()
@@ -1973,8 +1973,8 @@ namespace Xcaciv.Command.UnitTests
 
             // Assert
             var commandEnv = context.GetEnvironment("newcmd", false);
-            Assert.Contains("newcmd_VAR1", commandEnv.Keys);
-            Assert.Equal("value1", commandEnv["newcmd_VAR1"]);
+            Assert.Contains("VAR1", commandEnv.Keys);
+            Assert.Equal("value1", commandEnv["VAR1"]);
         }
 
         /// <summary>
@@ -2003,7 +2003,7 @@ namespace Xcaciv.Command.UnitTests
             context.UpdateEnvironment(dictionary2, "cmd");
 
             // Assert
-            var commandEnv = context.GetEnvironment("cmd", false);
+            var commandEnv = context.GetEnvironment("cmd");
             Assert.Equal("newvalue", commandEnv["cmd_VAR"]);
         }
 
@@ -2049,8 +2049,8 @@ namespace Xcaciv.Command.UnitTests
             context.UpdateEnvironment(dict2, "cmd2");
 
             // Assert
-            var cmd1Env = context.GetEnvironment("cmd1", false);
-            var cmd2Env = context.GetEnvironment("cmd2", false);
+            var cmd1Env = context.GetEnvironment("cmd1");
+            var cmd2Env = context.GetEnvironment("cmd2");
 
             Assert.Contains("cmd1_VAR", cmd1Env.Keys);
             Assert.DoesNotContain("cmd2_VAR", cmd1Env.Keys);
@@ -2156,7 +2156,7 @@ namespace Xcaciv.Command.UnitTests
             context.UpdateEnvironment(dictionary, "cmd");
 
             // Assert
-            var commandEnv = context.GetEnvironment("cmd", false);
+            var commandEnv = context.GetEnvironment("cmd");
             Assert.Equal(3, commandEnv.Count);
             Assert.Equal("value1", commandEnv["cmd_VAR1"]);
             Assert.Equal("value2", commandEnv["cmd_VAR2"]);
@@ -2218,7 +2218,7 @@ namespace Xcaciv.Command.UnitTests
         /// <summary>
         /// Test: UpdateEnvironment with empty string values
         /// Input: dictionary with empty string values
-        /// Expected: Empty values are stored correctly in the command-specific environment
+        /// Expected: Empty values are stored correctly in the command-specific environment, prefix is not duplicated for command keys
         /// </summary>
         [Fact]
         public void UpdateEnvironment_EmptyStringValues_StoredCorrectly()
@@ -2237,9 +2237,9 @@ namespace Xcaciv.Command.UnitTests
             context.UpdateEnvironment(dictionary, "cmd");
 
             // Assert
-            var commandEnv = context.GetEnvironment("cmd", false);
+            var commandEnv = context.GetEnvironment("cmd");
             Assert.Equal(string.Empty, commandEnv["cmd_VAR1"]);
-            Assert.Equal(string.Empty, commandEnv["SHARED_VAR"]);
+            Assert.Equal(string.Empty, commandEnv["cmd_SHARED_VAR"]);
             mockEnvironment.Verify(e => e.UpdateEnvironment(It.IsAny<Dictionary<string, string>>()), Times.Never);
         }
 
