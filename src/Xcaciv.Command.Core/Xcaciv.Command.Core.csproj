@@ -1,9 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-	  <ImplicitUsings>enable</ImplicitUsings>
-	  <Nullable>enable</Nullable>
-	  <Version>3.3.2</Version>
+	<ImplicitUsings>enable</ImplicitUsings>
+	<Nullable>enable</Nullable>
+	<Version>3.3.4</Version>
 	  <AssemblyName>Xcaciv.Command.Core</AssemblyName>
 	  <RootNamespace>Xcaciv.Command.Core</RootNamespace>
 	  <IsPublishable>True</IsPublishable>

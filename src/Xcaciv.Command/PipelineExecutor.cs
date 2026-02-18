@@ -19,7 +19,6 @@ public class PipelineExecutor : IPipelineExecutor
     {
     }
 
-
     public async Task ExecuteAsync(
         string commandLine,
         IIoContext ioContext,

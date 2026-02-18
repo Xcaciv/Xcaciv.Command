@@ -49,4 +49,12 @@ public interface ICommandRegistry
     /// Returns all registered commands (root commands only).
     /// </summary>
     IEnumerable<ICommandDescription> GetAllCommands();
+
+    /// <summary>
+    /// Builds a composite environment context by crawling all registered commands
+    /// and collecting their default environment values via <see cref="ICommandDelegate.GetDefaultEnvironment"/>.
+    /// </summary>
+    /// <param name="commandFactory">Factory used to instantiate commands for retrieving their default environments.</param>
+    /// <returns>An <see cref="IControllerEnvironmentContext"/> populated with command-scoped defaults.</returns>
+    IControllerEnvironmentContext GetEnvironment(ICommandFactory commandFactory);
 }

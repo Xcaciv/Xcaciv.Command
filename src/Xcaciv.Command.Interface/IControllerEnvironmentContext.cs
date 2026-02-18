@@ -61,7 +61,7 @@ namespace Xcaciv.Command.Interface
         /// Returns a snapshot of the current environment. Modifications to the returned
         /// dictionary do not affect the environment context; use SetValue() to modify variables.
         /// </remarks>
-        Dictionary<string, string> GetEnvironment(string commandName);
+        Dictionary<string, string> GetEnvironment(string commandName, bool prefix = true);
 
         /// <summary>
         /// Indicates whether this context has modified any environment variables.

@@ -407,7 +407,7 @@ namespace Xcaciv.Command.UnitTests
             var context = new ControllerEnvironmentContext();
 
             // Act
-            var environment = context.GetEnvironment("testCommand");
+            var environment = context.GetEnvironment("testCommand", false);
 
             // Assert
             Assert.NotNull(environment);
@@ -1190,7 +1190,7 @@ namespace Xcaciv.Command.UnitTests
             var context = new ControllerEnvironmentContext(mockEnvironment.Object, commandEnvironment);
 
             // Act
-            var result = context.GetEnvironment("   ");
+            var result = context.GetEnvironment("   ", false);
 
             // Assert
             Assert.NotNull(result);
@@ -1219,7 +1219,7 @@ namespace Xcaciv.Command.UnitTests
             var context = new ControllerEnvironmentContext(mockEnvironment.Object, commandEnvironment);
 
             // Act
-            var result = context.GetEnvironment("TestCommand");
+            var result = context.GetEnvironment("TestCommand", false);
 
             // Assert
             Assert.NotNull(result);
@@ -1244,7 +1244,7 @@ namespace Xcaciv.Command.UnitTests
             var context = new ControllerEnvironmentContext(mockEnvironment.Object, commandEnvironment);
 
             // Act
-            var result = context.GetEnvironment("NonExistentCommand");
+            var result = context.GetEnvironment("NonExistentCommand", false);
 
             // Assert
             Assert.NotNull(result);
@@ -1276,7 +1276,7 @@ namespace Xcaciv.Command.UnitTests
             var context = new ControllerEnvironmentContext(mockEnvironment.Object, commandEnvironment);
 
             // Act
-            var result = context.GetEnvironment(commandName);
+            var result = context.GetEnvironment(commandName, false);
 
             // Assert
             Assert.NotNull(result);
@@ -1351,7 +1351,7 @@ namespace Xcaciv.Command.UnitTests
             var context = new ControllerEnvironmentContext(mockEnvironment.Object, commandEnvironment);
 
             // Act
-            var result = context.GetEnvironment("TestCommand");
+            var result = context.GetEnvironment("TestCommand", false);
             result["ORIGINAL"] = "ModifiedValue";
             result["NEW"] = "NewValue";
 
@@ -1374,7 +1374,7 @@ namespace Xcaciv.Command.UnitTests
             var context = new ControllerEnvironmentContext(mockEnvironment.Object, commandEnvironment);
 
             // Act
-            var result = context.GetEnvironment("AnyCommand");
+            var result = context.GetEnvironment("AnyCommand", false);
 
             // Assert
             Assert.NotNull(result);
@@ -1404,7 +1404,7 @@ namespace Xcaciv.Command.UnitTests
             var context = new ControllerEnvironmentContext(mockEnvironment.Object, commandEnvironment);
 
             // Act
-            var result = context.GetEnvironment("Command2");
+            var result = context.GetEnvironment("Command2", false);
 
             // Assert
             Assert.NotNull(result);
@@ -1861,17 +1861,16 @@ namespace Xcaciv.Command.UnitTests
         }
 
         /// <summary>
-        /// Test: UpdateEnvironment with only shared variables does not set HasChanged to true
+        /// Test: UpdateEnvironment with non-prefixed variables stores them in command environment and sets HasChanged
         /// Input: dictionary with keys not prefixed with commandName, valid commandName
-        /// Expected: HasChanged remains false if only shared variables are updated
+        /// Expected: All entries stored in command environment, HasChanged is true
         /// </summary>
         [Fact]
-        public void UpdateEnvironment_OnlySharedVariables_DoesNotSetHasChanged()
+        public void UpdateEnvironment_NonPrefixedVariables_StoredInCommandEnvironmentAndSetsHasChanged()
         {
             // Arrange
             var mockEnvironment = new Mock<IEnvironmentContext>();
             mockEnvironment.Setup(e => e.HasChanged).Returns(false);
-            mockEnvironment.Setup(e => e.UpdateEnvironment(It.IsAny<Dictionary<string, string>>()));
             var context = new ControllerEnvironmentContext(mockEnvironment.Object);
             var dictionary = new Dictionary<string, string>
             {
@@ -1883,16 +1882,21 @@ namespace Xcaciv.Command.UnitTests
             context.UpdateEnvironment(dictionary, "mycommand");
 
             // Assert
-            Assert.False(context.HasChanged);
+            var commandEnv = context.GetEnvironment("mycommand", false);
+            Assert.Equal(2, commandEnv.Count);
+            Assert.Equal("value1", commandEnv["VAR1"]);
+            Assert.Equal("value2", commandEnv["VAR2"]);
+            mockEnvironment.Verify(e => e.UpdateEnvironment(It.IsAny<Dictionary<string, string>>()), Times.Never);
+            Assert.True(context.HasChanged);
         }
 
         /// <summary>
-        /// Test: UpdateEnvironment with mixed variables updates both command-specific and shared environments
+        /// Test: UpdateEnvironment with mixed variables stores all entries in command-specific environment
         /// Input: dictionary with both prefixed and non-prefixed keys, valid commandName
-        /// Expected: Command-specific vars go to command environment, shared vars go to shared environment, HasChanged is true
+        /// Expected: All entries stored in command environment, shared environment is not updated, HasChanged is true
         /// </summary>
         [Fact]
-        public void UpdateEnvironment_MixedVariables_UpdatesBothEnvironments()
+        public void UpdateEnvironment_MixedVariables_AllStoredInCommandEnvironment()
         {
             // Arrange
             var mockEnvironment = new Mock<IEnvironmentContext>();
@@ -1909,9 +1913,12 @@ namespace Xcaciv.Command.UnitTests
             context.UpdateEnvironment(dictionary, "mycommand");
 
             // Assert
-            mockEnvironment.Verify(e => e.UpdateEnvironment(It.Is<Dictionary<string, string>>(d =>
-                d.Count == 1 && d.ContainsKey("SHARED_VAR") && d["SHARED_VAR"] == "sharedvalue"
-            )), Times.Once);
+            var commandEnv = context.GetEnvironment("mycommand");
+            Assert.Equal(3, commandEnv.Count);
+            Assert.Equal("cmdvalue1", commandEnv["mycommand_VAR1"]);
+            Assert.Equal("cmdvalue2", commandEnv["mycommand_VAR2"]);
+            Assert.Equal("sharedvalue", commandEnv["mycommand_SHARED_VAR"]);
+            mockEnvironment.Verify(e => e.UpdateEnvironment(It.IsAny<Dictionary<string, string>>()), Times.Never);
             Assert.True(context.HasChanged);
         }
 
@@ -1947,7 +1954,7 @@ namespace Xcaciv.Command.UnitTests
         /// <summary>
         /// Test: UpdateEnvironment creates new command-specific dictionary on first use
         /// Input: dictionary with command-specific variables, command not previously seen
-        /// Expected: New ConcurrentDictionary is created and populated
+        /// Expected: New ConcurrentDictionary is created and populated, removes prefix
         /// </summary>
         [Fact]
         public void UpdateEnvironment_FirstTimeCommandName_CreatesNewCommandDictionary()
@@ -1965,9 +1972,9 @@ namespace Xcaciv.Command.UnitTests
             context.UpdateEnvironment(dictionary, "newcmd");
 
             // Assert
-            var commandEnv = context.GetEnvironment("newcmd");
-            Assert.Contains("newcmd_VAR1", commandEnv.Keys);
-            Assert.Equal("value1", commandEnv["newcmd_VAR1"]);
+            var commandEnv = context.GetEnvironment("newcmd", false);
+            Assert.Contains("VAR1", commandEnv.Keys);
+            Assert.Equal("value1", commandEnv["VAR1"]);
         }
 
         /// <summary>
@@ -2184,10 +2191,10 @@ namespace Xcaciv.Command.UnitTests
         /// <summary>
         /// Test: UpdateEnvironment with key that partially matches prefix but not at start
         /// Input: key contains commandName but not as prefix
-        /// Expected: Treated as shared variable, not command-specific
+        /// Expected: Stored in command-specific environment along with all other entries
         /// </summary>
         [Fact]
-        public void UpdateEnvironment_KeyContainsCommandNameButNotAsPrefix_TreatedAsShared()
+        public void UpdateEnvironment_KeyContainsCommandNameButNotAsPrefix_StoredInCommandEnvironment()
         {
             // Arrange
             var mockEnvironment = new Mock<IEnvironmentContext>();
@@ -2202,16 +2209,16 @@ namespace Xcaciv.Command.UnitTests
             context.UpdateEnvironment(dictionary, "cmd");
 
             // Assert
-            mockEnvironment.Verify(e => e.UpdateEnvironment(It.Is<Dictionary<string, string>>(d =>
-                d.Count == 1 && d.ContainsKey("PREFIX_cmd_VAR")
-            )), Times.Once);
-            Assert.False(context.HasChanged);
+            var commandEnv = context.GetEnvironment("cmd", false);
+            Assert.Equal("value", commandEnv["PREFIX_cmd_VAR"]);
+            mockEnvironment.Verify(e => e.UpdateEnvironment(It.IsAny<Dictionary<string, string>>()), Times.Never);
+            Assert.True(context.HasChanged);
         }
 
         /// <summary>
         /// Test: UpdateEnvironment with empty string values
         /// Input: dictionary with empty string values
-        /// Expected: Empty values are stored correctly in both shared and command-specific environments
+        /// Expected: Empty values are stored correctly in the command-specific environment, prefix is not duplicated for command keys
         /// </summary>
         [Fact]
         public void UpdateEnvironment_EmptyStringValues_StoredCorrectly()
@@ -2232,9 +2239,8 @@ namespace Xcaciv.Command.UnitTests
             // Assert
             var commandEnv = context.GetEnvironment("cmd");
             Assert.Equal(string.Empty, commandEnv["cmd_VAR1"]);
-            mockEnvironment.Verify(e => e.UpdateEnvironment(It.Is<Dictionary<string, string>>(d =>
-                d["SHARED_VAR"] == string.Empty
-            )), Times.Once);
+            Assert.Equal(string.Empty, commandEnv["cmd_SHARED_VAR"]);
+            mockEnvironment.Verify(e => e.UpdateEnvironment(It.IsAny<Dictionary<string, string>>()), Times.Never);
         }
 
         /// <summary>
@@ -2265,7 +2271,7 @@ namespace Xcaciv.Command.UnitTests
             var actualEnv = context.GetEnvironment();
             Assert.Equal(expectedEnvData, actualEnv);
 
-            var actualCommandEnv = context.GetEnvironment("testCommand");
+            var actualCommandEnv = context.GetEnvironment("testCommand", false);
             Assert.Equal(2, actualCommandEnv.Count);
             Assert.Equal("CMD_VALUE1", actualCommandEnv["CMD_KEY1"]);
             Assert.Equal("CMD_VALUE2", actualCommandEnv["CMD_KEY2"]);
@@ -2305,7 +2311,7 @@ namespace Xcaciv.Command.UnitTests
             var context = new ControllerEnvironmentContext(mockEnvironment.Object, null!);
 
             // Assert
-            Assert.Throws<NullReferenceException>(() => context.GetEnvironment("testCommand"));
+            Assert.Throws<NullReferenceException>(() => context.GetEnvironment("testCommand", false));
         }
 
         /// <summary>
@@ -2340,7 +2346,7 @@ namespace Xcaciv.Command.UnitTests
             var context = new ControllerEnvironmentContext(mockEnvironment.Object, emptyCommandEnvironment);
 
             // Assert
-            var result = context.GetEnvironment("nonExistentCommand");
+            var result = context.GetEnvironment("nonExistentCommand", false);
             Assert.NotNull(result);
             Assert.Empty(result);
         }
@@ -2375,11 +2381,11 @@ namespace Xcaciv.Command.UnitTests
             var context = new ControllerEnvironmentContext(mockEnvironment.Object, commandEnvironment);
 
             // Assert
-            var result1 = context.GetEnvironment("command1");
+            var result1 = context.GetEnvironment("command1", false);
             Assert.Single(result1);
             Assert.Equal("VALUE1", result1["CMD1_VAR"]);
 
-            var result2 = context.GetEnvironment("command2");
+            var result2 = context.GetEnvironment("command2", false);
             Assert.Single(result2);
             Assert.Equal("VALUE2", result2["CMD2_VAR"]);
         }
@@ -2407,9 +2413,9 @@ namespace Xcaciv.Command.UnitTests
             var context = new ControllerEnvironmentContext(mockEnvironment.Object, commandEnvironment);
 
             // Assert
-            var result1 = context.GetEnvironment("TestCommand");
-            var result2 = context.GetEnvironment("testcommand");
-            var result3 = context.GetEnvironment("TESTCOMMAND");
+            var result1 = context.GetEnvironment("TestCommand", false);
+            var result2 = context.GetEnvironment("testcommand", false);
+            var result3 = context.GetEnvironment("TESTCOMMAND", false);
 
             Assert.Equal("VALUE", result1["VAR"]);
             Assert.Equal("VALUE", result2["VAR"]);
@@ -2436,7 +2442,7 @@ namespace Xcaciv.Command.UnitTests
             var context = new ControllerEnvironmentContext(mockEnvironment.Object, commandEnvironment);
 
             // Assert
-            var result = context.GetEnvironment("emptyCommand");
+            var result = context.GetEnvironment("emptyCommand", false);
             Assert.NotNull(result);
             Assert.Empty(result);
         }

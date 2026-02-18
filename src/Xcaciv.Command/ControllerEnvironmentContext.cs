@@ -149,7 +149,7 @@ namespace Xcaciv.Command
         /// environment variables are returned.</param>
         /// <returns>A dictionary containing the environment variables for the specified command name. Returns an empty
         /// dictionary if the command name does not exist in the command environment.</returns>
-        public Dictionary<string, string> GetEnvironment(string commandName)
+        public Dictionary<string, string> GetEnvironment(string commandName, bool prefix = true)
         {
             if (String.IsNullOrEmpty(commandName))
             {
@@ -157,9 +157,20 @@ namespace Xcaciv.Command
             }
             else
             {
-                return _commandEnvironment.TryGetValue(commandName, out var commandEnv)
-                    ? new Dictionary<string, string>(commandEnv)
-                    : new Dictionary<string, string>();
+                if (_commandEnvironment.TryGetValue(commandName, out var commandEnv))
+                {
+                    if (!prefix) return commandEnv.ToDictionary(StringComparer.OrdinalIgnoreCase);
+                    // Add command prefix to keys when retrieving
+                    var commandPrefix = string.Concat(commandName, "_");
+                    var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                    foreach (var (key, value) in commandEnv)
+                    {
+                        var prefixedKey = key.StartsWith(commandPrefix, StringComparison.OrdinalIgnoreCase) ? key : commandPrefix + key;
+                        result[prefixedKey] = value;
+                    }
+                    return result;
+                }
+                return new Dictionary<string, string>();
             }
         }
         /// <summary>
@@ -204,26 +215,45 @@ namespace Xcaciv.Command
         /// <summary>
         /// Updates the environment with the specified key-value pairs.
         /// </summary>
-        /// <remarks>This method applies the updates to the environment immediately. Ensure that the
-        /// dictionary contains valid keys for the environment settings.</remarks>
+        /// <remarks>The updates are applied immediately to the environment. The dictionary parameter must
+        /// not be null and should contain valid keys recognized by the environment.</remarks>
         /// <param name="dictionary">A dictionary containing the environment settings to update. Each key represents a configuration setting, and
-        /// its corresponding value specifies the new value to apply. Cannot be null.</param>
+        /// its corresponding value specifies the new value to apply.</param>
         public void UpdateEnvironment(Dictionary<string, string> dictionary)
         {
-            _environment.UpdateEnvironment(dictionary);
+            var clean = RemoveCommandPrefixedValues(dictionary);
+            _environment.UpdateEnvironment(clean);
         }
         /// <summary>
-        /// Updates the environment with the specified key-value pairs, applying updates either globally or to a
-        /// command-specific environment based on the provided command name.
+        /// removes any keys from the provided dictionary that are prefixed with a command name, ensuring that only global environment variables are updated.
         /// </summary>
-        /// <remarks>If a command name is specified, only dictionary entries with keys that start with the
-        /// command name followed by an underscore are applied to the command-specific environment; all other entries
-        /// are applied to the shared environment. The HasChanged property is set to <see langword="true"/> if any
-        /// command-specific updates are made.</remarks>
-        /// <param name="dictionary">A dictionary containing key-value pairs to be applied to the environment. Keys prefixed with the command
-        /// name and an underscore are treated as command-specific updates.</param>
-        /// <param name="commandName">The name of the command for which command-specific environment updates should be applied. If null or empty,
-        /// all updates are applied to the shared environment.</param>
+        /// <param name="dictionary"></param>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        private Dictionary<string, string> RemoveCommandPrefixedValues(Dictionary<string, string> dictionary)
+        {
+            var commandPrefixes = _commandEnvironment.Keys.Select(commandName => string.Concat(commandName, "_")).ToList();
+            var clean = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var (key, value) in dictionary)
+            {
+                if (commandPrefixes.Any(prefix => key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
+                {
+                    Trace.WriteLine($"Skipping command-prefixed key {key} during global environment update.");
+                    continue;
+                }
+                clean[key] = value;
+            }
+            return clean;
+        }
+
+        /// <summary>
+        /// Updates environment variables with the specified key-value pairs, either globally or for a specific command.
+        /// </summary>
+        /// <remarks>If any updates are made, the HasChanged property is set to <see langword="true"/>.
+        /// When updating a command-specific environment, changes are logged for traceability.</remarks>
+        /// <param name="dictionary">A dictionary containing environment variable names and their corresponding values to update. Cannot be null.</param>
+        /// <param name="commandName">The name of the command whose environment should be updated. If null or empty, the global environment is
+        /// updated instead.</param>
         public void UpdateEnvironment(Dictionary<string, string> dictionary, string commandName)
         {
             if (String.IsNullOrEmpty(commandName))
@@ -232,39 +262,23 @@ namespace Xcaciv.Command
                 return;
             }
 
-            var commandPrefix = string.Concat(commandName, "_");
-            var sharedEnvironmentUpdates = new Dictionary<string, string>();
+            var prefix = commandName + "_";
             var commandEnvironment = _commandEnvironment.GetOrAdd(commandName, new ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase));
-            var commandEnvironmentUpdated = false;
 
             foreach ((var key, var addValue) in dictionary)
             {
-                if (key.StartsWith(commandPrefix, StringComparison.OrdinalIgnoreCase))
+                var indexKey = (key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) ?
+                    key.Substring(prefix.Length) :
+                    key;
+                
+                commandEnvironment.AddOrUpdate(indexKey, addValue, (environmentKey, existingValue) =>
                 {
-                    string? oldValue = null;
-                    commandEnvironment.AddOrUpdate(key, addValue, (environmentKey, existingValue) =>
-                    {
-                        oldValue = existingValue;
-                        Trace.WriteLine($"CommandEnvironment [{commandName}] value {environmentKey} changed from {existingValue} to {addValue}.");
-                        return addValue;
-                    });
-                    commandEnvironmentUpdated = true;
-                }
-                else
-                {
-                    sharedEnvironmentUpdates[key] = addValue;
-                }
+                    Trace.WriteLine($"CommandEnvironment [{commandName}] value {environmentKey} changed from {existingValue} to {addValue}.");
+                    return addValue;
+                });
             }
 
-            if (sharedEnvironmentUpdates.Count > 0)
-            {
-                _environment.UpdateEnvironment(sharedEnvironmentUpdates);
-            }
-
-            if (commandEnvironmentUpdated)
-            {
-                HasChanged = true;
-            }
+            HasChanged = dictionary.Count > 0;
         }
 
         /// <summary>

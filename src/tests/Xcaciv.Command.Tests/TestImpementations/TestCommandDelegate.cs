@@ -16,23 +16,26 @@ namespace Xcaciv.Command.Tests.TestImplementations
         private readonly Func<IIoContext, IEnvironmentContext, IAsyncEnumerable<IResult<string>>>? _mainFunc;
         private readonly Func<string[], IEnvironmentContext, string>? _helpFunc;
         private readonly Func<string[], string>? _oneLineHelpFunc;
+        private readonly Dictionary<string, string> _defaultEnvironment;
 
         public string Command { get; set; } = "TEST";
 
         public string RootCommand { get; set; } = string.Empty;
 
-        public Dictionary<string, string> GetDefaultEnvironment() => new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        public Dictionary<string, string> GetDefaultEnvironment() => new Dictionary<string, string>(_defaultEnvironment, StringComparer.OrdinalIgnoreCase);
 
         public List<ICommandParameter> GetParameters() => new List<ICommandParameter>();
 
         public TestCommandDelegate(
             Func<IIoContext, IEnvironmentContext, IAsyncEnumerable<IResult<string>>>? mainFunc = null,
             Func<string[], IEnvironmentContext, string>? helpFunc = null,
-            Func<string[], string>? oneLineHelpFunc = null)
+            Func<string[], string>? oneLineHelpFunc = null,
+            Dictionary<string, string>? defaultEnvironment = null)
         {
             _mainFunc = mainFunc;
             _helpFunc = helpFunc;
             _oneLineHelpFunc = oneLineHelpFunc;
+            _defaultEnvironment = defaultEnvironment ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         }
 
         public async IAsyncEnumerable<IResult<string>> Main(IIoContext io, IEnvironmentContext environment)
@@ -62,17 +65,19 @@ namespace Xcaciv.Command.Tests.TestImplementations
     public class EchoCommandDelegate : ICommandDelegate
     {
         private readonly string _prefix;
+        private readonly Dictionary<string, string> _defaultEnvironment;
 
-        public EchoCommandDelegate(string prefix = "")
+        public EchoCommandDelegate(string prefix = "", Dictionary<string, string>? defaultEnvironment = null)
         {
             _prefix = prefix;
+            _defaultEnvironment = defaultEnvironment ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         }
 
         public string Command => "ECHO";
 
         public string RootCommand => string.Empty;
 
-        public Dictionary<string, string> GetDefaultEnvironment() => new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        public Dictionary<string, string> GetDefaultEnvironment() => new Dictionary<string, string>(_defaultEnvironment, StringComparer.OrdinalIgnoreCase);
 
         public List<ICommandParameter> GetParameters() => new List<ICommandParameter>();
 

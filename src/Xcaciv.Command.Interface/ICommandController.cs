@@ -58,5 +58,13 @@
         /// <param name="modifiesEnvironment">Indicates whether the command modifies the environment. Set to <see langword="true"/> if the command alters
         /// environment variables or state; otherwise, <see langword="false"/>.</param>
         void AddCommand(string packageKey, ICommandDelegate command, bool modifiesEnvironment = false);
+        /// <summary>
+        /// Gets the current environment context for the controller.
+        /// </summary>
+        /// <returns>An instance of <see cref="IControllerEnvironmentContext"/> representing the default environment context given the commands registered.</returns>
+        /// <remarks> Practically, this method crawls the command stack to build a composite environment context calling GetEnvironment() on each command 
+        /// in the registry.The resulting context reflects the cumulative environment state as influenced by all commands in the registry.
+        /// </remarks>
+        IControllerEnvironmentContext GetEnvironment();
     }
 }

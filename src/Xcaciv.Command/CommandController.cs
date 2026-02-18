@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO.Abstractions;
 using System.Threading.Tasks;
 using Xcaciv.Command.Commands;
@@ -252,8 +253,8 @@ public class CommandController : Interface.ICommandController
 
             if (controllerEnvironmentChild.HasChanged && _commandRegistry.TryGetCommand(lastCommandName, out var commandDesc) && commandDesc?.ModifiesEnvironment == true)
             {
-                env.UpdateEnvironment(controllerEnvironmentChild.GetEnvironment());
-                env.UpdateEnvironment(controllerEnvironmentChild.GetEnvironment(lastCommandName), lastCommandName);
+                var modifiedEnv = controllerEnvironmentChild.GetEnvironment(lastCommandName, false);
+                env.UpdateEnvironment(modifiedEnv);
             }
         }
         else
@@ -264,9 +265,19 @@ public class CommandController : Interface.ICommandController
 
             var childEnv = await env.GetChild(commandName).ConfigureAwait(false);
             await ExecuteCommandInternal(commandName, ioContext, childEnv, cancellationToken).ConfigureAwait(false);
-            if (childEnv.HasChanged && _commandRegistry.TryGetCommand(commandName, out var commandDesc) && commandDesc?.ModifiesEnvironment == true)
+            if (childEnv.HasChanged && _commandRegistry.TryGetCommand(commandName, out var commandDesc))
             {
-                env.UpdateEnvironment(childEnv.GetEnvironment(), commandName);
+                // if this is a special command, it can update global values
+                if (commandDesc?.ModifiesEnvironment == true)
+                {
+                    env.UpdateEnvironment(childEnv.GetEnvironment());
+                }
+                else
+                {
+                    // only allow commands to update their own environment values
+                    var envUpdate = childEnv.GetEnvironment().Where(x => x.Key.StartsWith(commandName + "_", StringComparison.OrdinalIgnoreCase)).ToDictionary(x => x.Key.Substring(commandName.Length + 1), x => x.Value);
+                    env.UpdateEnvironment(envUpdate, commandName);
+                }
             }
         }
     }
@@ -303,5 +314,14 @@ public class CommandController : Interface.ICommandController
             : commandKey;
 
         return _commandExecutor.GetHelpAsync(targetCommand, ioContext, env, cancellationToken);
+    }
+
+    /// <summary>
+    /// Gets the current environment context for the controller.
+    /// </summary>
+    /// <returns>An instance of <see cref="IControllerEnvironmentContext"/> representing the default environment context given the commands registered.</returns>
+    public IControllerEnvironmentContext GetEnvironment()
+    {
+        return _commandRegistry.GetEnvironment(_commandFactory);
     }
 }
