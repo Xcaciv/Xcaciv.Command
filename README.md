@@ -1,5 +1,7 @@
 # Xcaciv.Command: Excessive Command Framework
 
+[![Securability](https://localhost:3001/badge/15b3f9cf-ec24-455d-bb3b-d00427a61692.svg)](https://localhost:3001/r/Xcaciv/Xcaciv.Command)
+
 Excessively modular, async pipeable, command framework with strongly-typed parameter support.
 
 ```csharp
