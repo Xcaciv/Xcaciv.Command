@@ -19,12 +19,63 @@ await controller.Run("Say Hello to my little friend", io, env);
 
 Commands are .NET class libraries that contain implementations of the `Xc.Command.ICommandDelegate` interface and are decorated with attributes that describe the command and its parameters. These attributes filter and validate input and drive auto-generated help.
 
-**Authoring note:** When building a new command, start from the template and guidance in [COMMAND_TEMPLATE.md](COMMAND_TEMPLATE.md) to match the latest interfaces (`ICommandDelegate`/`AbstractCommand`), `OutputFormat`, and environment propagation rules.
+**Authoring note:** When building a new command — manually or with an AI coding agent — start from [COMMAND_TEMPLATE.md](COMMAND_TEMPLATE.md). The template includes agent-readable instructions that walk through the full TDD workflow (Red → Green → Refactor), implementation patterns, testing, runtime loading, and signed NuGet packaging guidance. Point your agent at the file and it will follow the steps.
 
 ## Getting Started
 
 - Read the quickstart in [docs/learn/quickstart.md](docs/learn/quickstart.md) for a five-minute walkthrough.
-- When building a new command, start from [COMMAND_TEMPLATE.md](COMMAND_TEMPLATE.md) to match the latest interfaces (`ICommandDelegate`/`AbstractCommand`), `OutputFormat`, and environment propagation rules.
+- When building a new command, follow the TDD workflow below and use [COMMAND_TEMPLATE.md](COMMAND_TEMPLATE.md) as the detailed implementation instructionss.
+
+## Using the Command Template
+
+`COMMAND_TEMPLATE.md` is a portable guide for creating an Xcaciv.Command plugin in a new or existing repository. It is not tied to this repository's directory structure. Copy it into the new repository, keep it beside that repository's README, or link to it from the repository's contributor documentation.
+
+The template begins with **agent instructions** — a structured, step-by-step workflow that an AI coding agent can follow directly. Humans benefit from the same steps; the agent framing simply makes the order and expectations unambiguous.
+
+**Using an AI agent?** Point the agent at `COMMAND_TEMPLATE.md` and tell it to read it and follow the directions.
+
+```code
+Read and follow the directions in https://raw.githubusercontent.com/Xcaciv/Xcaciv.Command/refs/heads/main/COMMAND_TEMPLATE.md to create a command in the root of the Foo.Consoto project.
+```
+
+### Recommended workflow (TDD: Red → Green → Refactor)
+
+1. **Define the command before coding.** Record the command name, purpose, prototype, parameters, allowed values, piped-input behavior, environment changes, output format, error behavior, security constraints, and example invocations. Use this as the command's small PRD.
+2. **Choose the implementation model.** Start with `AbstractCommand`. It supplies the normal parameter processing, help generation, pipeline hooks, result formatting, and disposal behavior. Implement `ICommandDelegate` directly only for a deliberate custom or legacy execution model; it requires more framework integration and support code.
+3. **Create a self-contained class library.** The new project should contain the command source, package metadata, a README, and its tests. Use project references while developing against a local checkout, or package references when the command repository is independent.
+4. **🔴 Write failing tests first.** Define the command's expected behavior as xUnit tests _before_ writing any implementation. Cover happy-path execution, missing/invalid parameters, piped input, error propagation, and flags. Confirm the tests do not pass — compilation errors or assertion failures are expected at this stage.
+5. **🟢 Implement just enough to pass.** Create the command class, add `CommandRegisterAttribute` and parameter attributes, and implement `HandleExecution` and `HandlePipedChunk` with the minimum logic needed to make every test green. Do not add behavior that no test exercises yet.
+6. **🔵 Refactor while tests stay green.** Extract helpers, simplify conditionals, improve naming, and add optional overrides (`OnStartPipe`, `OnEndPipe`, `DisposeAsync`) as needed. Re-run the tests after every change. If a test breaks, undo and try a different approach.
+7. **Test the real plugin path.** Add at least one end-to-end test that loads the compiled package output via `AddPackageDirectory()` and `LoadCommands()`. Verify help generation, parameter validation, and pipeline discovery.
+8. **Pack and sign the release.** Build in Release mode, generate the `.nupkg` and `.snupkg`, sign the assembly with a strong-name key, sign the NuGet package with the organization's certificate, and verify the resulting package before publishing.
+
+### Minimal independent project references
+
+When the command repository consumes published framework packages, use package references similar to these. Pin versions consistently with the framework version being targeted:
+
+```xml
+<ItemGroup>
+	<PackageReference Include="Xcaciv.Command.Core" Version="3.3.0" />
+	<PackageReference Include="Xcaciv.Command.Interface" Version="3.3.0" />
+</ItemGroup>
+```
+
+When developing the command and framework together, replace these with local project references. Do not copy repository-relative paths from the example test package into an unrelated repository without adjusting them.
+
+### What to copy from the template
+
+The template includes the following reusable material:
+
+- the preferred `AbstractCommand` implementation pattern
+- a warning and compatibility guidance for direct `ICommandDelegate` implementations
+- parameter attribute examples and typed parameter access
+- the current `HandlePipedChunk(IResult<string>, ...)` signature
+- pipeline error propagation and environment handling patterns
+- a standalone package project shape
+- xUnit test and runtime discovery examples
+- assembly signing and NuGet package signing steps
+
+For a new repository, replace placeholder names such as `Contoso.MyCommandPackage`, `MyTransformCommand`, and `MYTRANSFORM` with the command's actual package, class, and registration names. Keep the framework version, target frameworks, package metadata, and signing policy explicit in the new repository.
 
 ## Features
 
@@ -151,7 +202,7 @@ See `SECURITY.md` for secure audit logging patterns.
 
 - [CHANGELOG](CHANGELOG.md) - Complete version history and release notes
 - [HandlePipedChunk Migration Guide](docs/changelog-3.2.3-handlePipedChunk-signature-change.md) - Version 3.2.3 breaking change guide
-- [Command Template](COMMAND_TEMPLATE.md) - Template and guide for implementing new commands
+- [Command Template](COMMAND_TEMPLATE.md) - TDD workflow and agent instructions for implementing new commands
 - [Quickstart](docs/learn/quickstart.md) - Five-minute walkthrough
 - [Parameter System Implementation](PARAMETER_SYSTEM_IMPLEMENTATION.md) - Type-safe parameter guide
 - [Command Test Coverage](COMMAND_TEST_COVERAGE_COMPLETE.md) - Test coverage report
