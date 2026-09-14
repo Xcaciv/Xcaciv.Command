@@ -419,3 +419,331 @@ public override IResult<string> HandlePipedChunk(
     var input = pipedChunk.Output ?? string.Empty;
     return CommandResult<string>.Success(input.ToUpper());
 }
+
+## End-to-End Workflow for a New Command Package
+
+Use this workflow when you are creating a new Xcaciv.Command implementation, whether it lives in an existing project or in a brand-new package.
+
+### 1. Prefer `AbstractCommand` over a custom `ICommandDelegate`
+
+The recommended implementation path is to inherit from `AbstractCommand` and decorate the class with attribute-driven parameter metadata. This keeps the command aligned with Xcaciv.Command’s normal registration, help generation, pipeline behavior, and environment semantics.
+
+Only implement `ICommandDelegate` directly when you need a very custom execution model and you are prepared to support the command manually. For most teams, a custom `ICommandDelegate` is harder to maintain, harder to test, and less compatible with the command loader, help generation, and parameter system.
+
+A good rule is:
+
+- Use `AbstractCommand` if the command should behave like a normal Xcaciv.Command plugin.
+- Use `ICommandDelegate` only when you need a bespoke runtime contract or legacy compatibility.
+
+### 2. Decide whether the command belongs in an existing project or a new package
+
+If you already have a project that owns the command domain, add the command there.
+
+If not, create a new class library project and a solution for it.
+
+Suggested structure:
+
+```text
+MyCommandPackage/
+  MyCommandPackage.csproj
+  Commands/
+    MyTransformCommand.cs
+  README.md
+  tests/
+    MyCommandPackage.Tests/
+      MyCommandPackage.Tests.csproj
+```
+
+You should also create a brief PRD before writing code if the command is new or cross-cutting. A simple PRD should include:
+
+- Command name and purpose
+- User-visible prototype, for example: `MYTRANSFORM <source> -dest <target> [-overwrite]`
+- Ordered, named, flag, and suffix parameters
+- Whether it reads or writes environment values
+- Whether it accepts piped input and how it should behave
+- Success and failure output shapes
+- Error handling expectations and tracing
+- Security and validation constraints
+- Example invocation and expected output
+
+### 3. Example command package project
+
+The repository’s test package is a good model: `src/tests/zTestCommandPackage/zTestCommandPackage.csproj`.
+
+```xml
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(XcacivTargetFrameworks)</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <PackageId>Contoso.MyCommandPackage</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>Contoso</Authors>
+    <Company>Contoso</Company>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/contoso/MyCommandPackage</PackageProjectUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/contoso/MyCommandPackage</RepositoryUrl>
+    <PackageDescription>Custom Xcaciv.Command plugin package.</PackageDescription>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <PackageOutputPath>$(MSBuildThisFileDirectory)artifacts\packages</PackageOutputPath>
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>$(MSBuildThisFileDirectory)Key.snk</AssemblyOriginatorKeyFile>
+    <PublicSign Condition="'$(OS)' != 'Windows_NT'">true</PublicSign>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Xcaciv.Command.Core\Xcaciv.Command.Core.csproj" PrivateAssets="all" />
+    <ProjectReference Include="..\..\Xcaciv.Command.Interface\Xcaciv.Command.Interface.csproj" PrivateAssets="all" />
+  </ItemGroup>
+
+</Project>
+```
+
+This is the minimum shape you need for a command package. The target framework should follow the repo-wide convention from `Directory.Build.props`, and the package should be created as a normal class library that exposes plugin commands through attributes.
+
+### 4. Create the command implementation
+
+The pattern should look like this:
+
+```csharp
+using System.Collections.Generic;
+using Xcaciv.Command.Core;
+using Xcaciv.Command.Interface;
+using Xcaciv.Command.Interface.Attributes;
+using Xcaciv.Command.Interface.Parameters;
+
+namespace Contoso.MyCommandPackage;
+
+[CommandRegister("MYTRANSFORM", "Transforms text using a custom rule", Prototype = "MYTRANSFORM <input> -mode <fast|safe> [-verbose]")]
+[CommandParameterOrdered("Input", "Input value to transform")]
+[CommandParameterNamed("Mode", "Processing mode", IsRequired = false, DefaultValue = "safe", AllowedValues = ["fast", "safe"])]
+[CommandFlag("Verbose", "Emit additional output")]
+public class MyTransformCommand : AbstractCommand
+{
+    public override IResult<string> HandleExecution(Dictionary<string, IParameterValue> parameters, IEnvironmentContext env)
+    {
+        var input = parameters.TryGetValue("input", out var inputParam) && inputParam.IsValid
+            ? inputParam.GetValue<string>()
+            : string.Empty;
+
+        var mode = parameters.TryGetValue("mode", out var modeParam) && modeParam.IsValid
+            ? modeParam.GetValue<string>()
+            : "safe";
+
+        var verbose = parameters.TryGetValue("verbose", out var verboseParam) && verboseParam.IsValid
+            ? verboseParam.GetValue<bool>()
+            : false;
+
+        var result = mode == "fast"
+            ? input.Trim().ToUpperInvariant()
+            : input.Trim();
+
+        if (verbose)
+        {
+            result += " [verbose]";
+        }
+
+        return CommandResult<string>.Success(result, this.OutputFormat);
+    }
+
+    public override IResult<string> HandlePipedChunk(IResult<string> pipedChunk, Dictionary<string, IParameterValue> parameters, IEnvironmentContext env)
+    {
+        if (!pipedChunk.IsSuccess)
+        {
+            return pipedChunk;
+        }
+
+        var input = pipedChunk.Output ?? string.Empty;
+        return CommandResult<string>.Success(input.Trim(), this.OutputFormat);
+    }
+}
+```
+
+This preserves the framework’s recommended structure:
+
+- `CommandRegisterAttribute` gives the command its public name and help metadata.
+- Parameter attributes define ordering, names, and validation.
+- `HandleExecution` does the main work.
+- `HandlePipedChunk` manages streamed input safely and propagates upstream failures.
+
+### 5. Add test configuration for the package
+
+You should fully test the package before creating a signed NuGet package. A practical setup is:
+
+1. Create a class library for the command plugin.
+2. Create a separate xUnit test project that loads the plugin directory.
+3. Use `CommandController`, `MemoryIoContext`, and the package directory loading workflow.
+
+Example test project:
+
+```xml
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>$(XcacivBaseTargetFramework)</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <PackageReference Include="coverlet.collector" Version="6.0.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Xcaciv.Command\Xcaciv.Command.csproj" />
+  </ItemGroup>
+
+</Project>
+```
+
+Example test code:
+
+```csharp
+using System.Threading.Tasks;
+using Xunit;
+using Xcaciv.Command;
+
+public class MyTransformCommandTests
+{
+    [Fact]
+    public async Task MyTransformCommand_ExecutesSuccessfully()
+    {
+        var controller = new CommandController();
+        controller.AddPackageDirectory("C:/path/to/bin/Debug/net10.0");
+        controller.LoadCommands();
+
+        var io = new MemoryIoContext();
+        var env = new ControllerEnvironmentContext();
+
+        var result = await controller.Run("MYTRANSFORM hello -mode safe", io, env);
+
+        Assert.NotNull(result);
+        Assert.Contains("hello", result.ToString());
+    }
+}
+```
+
+For a full validation pass, check these scenarios:
+
+- Help output for `--HELP`
+- Required parameter validation
+- Optional parameter behavior
+- Flag parsing for switches like `-verbose`
+- Piped input processing
+- Failure propagation from upstream commands
+- Environment mutation, if the command writes values
+- Package discovery through `AddPackageDirectory()` and `LoadCommands()`
+
+### 6. Load the package into the controller for end-to-end validation
+
+The command package must be discoverable by the framework at runtime. Use the same pattern expected by the repo:
+
+```csharp
+var controller = new CommandController();
+controller.AddPackageDirectory("C:/path/to/package/bin/Debug/net10.0");
+controller.LoadCommands();
+
+var io = new MemoryIoContext();
+var env = new ControllerEnvironmentContext();
+
+await controller.Run("MYTRANSFORM hello -mode safe -verbose", io, env);
+```
+
+If the command is in an existing project, you can register it directly with the controller instead of using a plugin directory.
+
+### 7. Create a signed NuGet package
+
+When the command is ready, package it as a signed NuGet artifact. This usually means both assembly signing and package signing.
+
+#### Assembly signing
+
+Add strong-name signing to the project:
+
+```xml
+<PropertyGroup>
+  <SignAssembly>true</SignAssembly>
+  <AssemblyOriginatorKeyFile>$(MSBuildThisFileDirectory)Key.snk</AssemblyOriginatorKeyFile>
+  <PublicSign Condition="'$(OS)' != 'Windows_NT'">true</PublicSign>
+</PropertyGroup>
+```
+
+Create the key file once:
+
+```powershell
+dotnet nuget sign
+```
+
+If you want to generate a strong-name key using the .NET SDK tools, use:
+
+```powershell
+sn -k Key.snk
+```
+
+#### Package signing
+
+Package signing is typically done with a certificate that matches your organization’s signing policy. If you have a certificate thumbprint:
+
+```powershell
+dotnet pack MyCommandPackage.csproj -c Release -p:PackageOutputPath=artifacts\packages -p:SignPackage=true -p:CertificateThumbprint="<thumbprint>"
+```
+
+If you are using NuGet’s signing workflow instead of MSBuild property-based signing, use:
+
+```powershell
+nuget sign artifacts\packages\Contoso.MyCommandPackage.1.0.0.nupkg -CertificateSubjectName "Contoso" -Timestamper "http://timestamp.digicert.com"
+```
+
+For a repository that already follows the framework’s packaging conventions, follow the model already used in `src/Xcaciv.Command/Xcaciv.Command.csproj`:
+
+- `GeneratePackageOnBuild` set to true
+- `IncludeSymbols` enabled
+- `SymbolPackageFormat` set to `snupkg`
+- `PackageReadmeFile` provided
+- `PackageLicenseExpression` set explicitly
+- `PackageOutputPath` configured for artifact output
+
+### 8. Recommended validation checklist before release
+
+Before publishing the package, validate all of the following:
+
+- The command class loads without reflection errors.
+- Help text is generated correctly.
+- Required parameters fail gracefully when missing.
+- Named flags parse as expected.
+- Pipelines continue to propagate success and failure states.
+- The package loads from a directory using `AddPackageDirectory()`.
+- The working package can be packed in Release mode.
+- The signed package is accepted by your distribution process or internal feed.
+
+### 9. Practical recommendation
+
+If the command is new and not deeply coupled to a legacy implementation, create the PRD first, then implement the command in the smallest relevant class library, then validate it with an isolated xUnit project, and finally pack and sign the package. This keeps the command aligned with the rest of Xcaciv.Command and reduces long-term maintenance cost.
+
+If you want the next step, I can help you create a concrete example project, PRD, command class, and test project for your command idea. If you already know the command name and desired behavior, reply with that name and a short feature description and I will tailor the workflow to your exact implementation.
+
+---
+
+## Quick checklist for a new command implementation
+
+- [ ] Decide if `AbstractCommand` is the right base class.
+- [ ] Brainstorm the PRD before coding.
+- [ ] Create or choose a class library project.
+- [ ] Add references to the Xcaciv.Command packages.
+- [ ] Implement the command with `CommandRegisterAttribute` and parameter attributes.
+- [ ] Handle piped input and upstream failure propagation correctly.
+- [ ] Add xUnit tests for happy-path and failure-path execution.
+- [ ] Validate runtime loading from a package directory.
+- [ ] Pack the package in Release mode.
+- [ ] Sign the assembly and the NuGet package.
+- [ ] Publish to your package source or internal feed.
+
+This gives you a consistent path from design to deployment while keeping the command aligned with the Xcaciv.Command framework’s expected behavior and package conventions.
+
