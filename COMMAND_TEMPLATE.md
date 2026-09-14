@@ -419,14 +419,15 @@ public override IResult<string> HandlePipedChunk(
     var input = pipedChunk.Output ?? string.Empty;
     return CommandResult<string>.Success(input.ToUpper());
 }
+```
 
 ## End-to-End Workflow for a New Command Package
 
-Use this workflow when you are creating a new Xcaciv.Command implementation, whether it lives in an existing project or in a brand-new package.
+Use this workflow when you are creating a new Xcaciv.Command implementation in a standalone solution or repository.
 
 ### 1. Prefer `AbstractCommand` over a custom `ICommandDelegate`
 
-The recommended implementation path is to inherit from `AbstractCommand` and decorate the class with attribute-driven parameter metadata. This keeps the command aligned with Xcaciv.Command’s normal registration, help generation, pipeline behavior, and environment semantics.
+The recommended implementation path is to inherit from `AbstractCommand` and decorate the class with attribute-driven parameter metadata. This keeps the command aligned with the framework’s normal registration, help generation, pipeline behavior, and environment semantics.
 
 Only implement `ICommandDelegate` directly when you need a very custom execution model and you are prepared to support the command manually. For most teams, a custom `ICommandDelegate` is harder to maintain, harder to test, and less compatible with the command loader, help generation, and parameter system.
 
@@ -452,9 +453,11 @@ MyCommandPackage/
   tests/
     MyCommandPackage.Tests/
       MyCommandPackage.Tests.csproj
+  artifacts/
+    packages/
 ```
 
-You should also create a brief PRD before writing code if the command is new or cross-cutting. A simple PRD should include:
+Before writing code, create a brief PRD if the command is new or cross-cutting. A simple PRD should include:
 
 - Command name and purpose
 - User-visible prototype, for example: `MYTRANSFORM <source> -dest <target> [-overwrite]`
@@ -466,15 +469,15 @@ You should also create a brief PRD before writing code if the command is new or 
 - Security and validation constraints
 - Example invocation and expected output
 
-### 3. Example command package project
+### 3. Use a self-contained package project template
 
-The repository’s test package is a good model: `src/tests/zTestCommandPackage/zTestCommandPackage.csproj`.
+A standalone package should not depend on repository-specific file layouts. The project should be a normal class library, with package metadata and tests included in the same repo.
 
 ```xml
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>$(XcacivTargetFrameworks)</TargetFrameworks>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
@@ -496,18 +499,18 @@ The repository’s test package is a good model: `src/tests/zTestCommandPackage/
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Xcaciv.Command.Core\Xcaciv.Command.Core.csproj" PrivateAssets="all" />
-    <ProjectReference Include="..\..\Xcaciv.Command.Interface\Xcaciv.Command.Interface.csproj" PrivateAssets="all" />
+    <ProjectReference Include="..\Xcaciv.Command.Core\Xcaciv.Command.Core.csproj" PrivateAssets="all" />
+    <ProjectReference Include="..\Xcaciv.Command.Interface\Xcaciv.Command.Interface.csproj" PrivateAssets="all" />
   </ItemGroup>
 
 </Project>
 ```
 
-This is the minimum shape you need for a command package. The target framework should follow the repo-wide convention from `Directory.Build.props`, and the package should be created as a normal class library that exposes plugin commands through attributes.
+This is the minimum shape for a command package. The key point is that the package is self-contained: it can be copied into another repo, restored, built, tested, and packed without assumptions about the source tree layout.
 
 ### 4. Create the command implementation
 
-The pattern should look like this:
+The command should follow the standard plugin pattern:
 
 ```csharp
 using System.Collections.Generic;
@@ -584,7 +587,7 @@ Example test project:
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>$(XcacivBaseTargetFramework)</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
@@ -598,7 +601,8 @@ Example test project:
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Xcaciv.Command\Xcaciv.Command.csproj" />
+    <ProjectReference Include="..\MyCommandPackage\MyCommandPackage.csproj" />
+    <ProjectReference Include="..\Xcaciv.Command\Xcaciv.Command.csproj" />
   </ItemGroup>
 
 </Project>
@@ -607,7 +611,6 @@ Example test project:
 Example test code:
 
 ```csharp
-using System.Threading.Tasks;
 using Xunit;
 using Xcaciv.Command;
 
@@ -617,7 +620,7 @@ public class MyTransformCommandTests
     public async Task MyTransformCommand_ExecutesSuccessfully()
     {
         var controller = new CommandController();
-        controller.AddPackageDirectory("C:/path/to/bin/Debug/net10.0");
+        controller.AddPackageDirectory("C:/path/to/package/bin/Debug/net10.0");
         controller.LoadCommands();
 
         var io = new MemoryIoContext();
@@ -644,7 +647,7 @@ For a full validation pass, check these scenarios:
 
 ### 6. Load the package into the controller for end-to-end validation
 
-The command package must be discoverable by the framework at runtime. Use the same pattern expected by the repo:
+The command package must be discoverable by the framework at runtime. Use the standard plugin loading pattern:
 
 ```csharp
 var controller = new CommandController();
@@ -675,13 +678,7 @@ Add strong-name signing to the project:
 </PropertyGroup>
 ```
 
-Create the key file once:
-
-```powershell
-dotnet nuget sign
-```
-
-If you want to generate a strong-name key using the .NET SDK tools, use:
+Generate a key file once:
 
 ```powershell
 sn -k Key.snk
@@ -701,7 +698,7 @@ If you are using NuGet’s signing workflow instead of MSBuild property-based si
 nuget sign artifacts\packages\Contoso.MyCommandPackage.1.0.0.nupkg -CertificateSubjectName "Contoso" -Timestamper "http://timestamp.digicert.com"
 ```
 
-For a repository that already follows the framework’s packaging conventions, follow the model already used in `src/Xcaciv.Command/Xcaciv.Command.csproj`:
+For a repository that already follows the framework’s packaging conventions, set the core package properties explicitly:
 
 - `GeneratePackageOnBuild` set to true
 - `IncludeSymbols` enabled
@@ -727,7 +724,7 @@ Before publishing the package, validate all of the following:
 
 If the command is new and not deeply coupled to a legacy implementation, create the PRD first, then implement the command in the smallest relevant class library, then validate it with an isolated xUnit project, and finally pack and sign the package. This keeps the command aligned with the rest of Xcaciv.Command and reduces long-term maintenance cost.
 
-If you want the next step, I can help you create a concrete example project, PRD, command class, and test project for your command idea. If you already know the command name and desired behavior, reply with that name and a short feature description and I will tailor the workflow to your exact implementation.
+If you are moving this template into its own repository, keep it self-contained: include the repository README, project scaffolding, signing guidance, and test samples, but avoid references to local tree layouts or sibling repositories.
 
 ---
 
