@@ -1,5 +1,204 @@
 # Command Implementation Template
 
+> **Agent Instructions — READ THIS FIRST**
+>
+> You are an AI coding agent. This file is your primary reference for creating a new command in the Xcaciv.Command framework. Follow every step below in order. Do not skip steps or improvise patterns that contradict this document.
+
+## Agent Workflow
+
+When asked to create a new command, execute these steps sequentially:
+
+### Step 1 — Gather requirements
+
+Before writing any code, confirm or determine these facts. If the user's request is ambiguous, ask before proceeding.
+
+| Fact | How to determine |
+|------|-----------------|
+| **Command name** | The user-visible name (e.g. `MYTRANSFORM`). Must be alphanumeric, no spaces. |
+| **Description** | One-line summary of what the command does. |
+| **Prototype** | Usage string shown in help, e.g. `MYTRANSFORM <input> -mode <fast\|safe> [-verbose]` |
+| **Parameters** | List each parameter: its name, type (ordered / named / flag / suffix), data type, whether it is required, any allowed values, any default value, and whether it accepts piped input (`UsePipe`). |
+| **Sub-command?** | If this command lives under a root command (e.g. `do say`), note the root command name and description for `CommandRootAttribute`. |
+| **Pipeline behavior** | How should `HandlePipedChunk` behave? Pass-through, transform, filter, accumulate, or not supported? |
+| **Environment interaction** | Does the command read or write environment variables via `IEnvironmentContext`? |
+| **Output format** | Which `ResultFormat` — `General` (default), `JSON`, `CSV`, `TDL`, or `YAML`? |
+| **Disposable resources** | Does the command own any resources that require `DisposeAsync`? |
+| **Target project** | Existing class library, or create a new package? |
+
+### Step 2 — Choose the base class
+
+Use `AbstractCommand` unless you need a fully custom execution model. This is the right choice for almost every command. Only implement `ICommandDelegate` directly when you require a bespoke runtime contract or need to bypass the attribute-driven parameter system entirely.
+
+### Step 3 — 🔴 RED: Write failing tests first
+
+> **This workflow follows TDD (Red → Green → Refactor). Always write tests before the implementation. The tests define the expected behavior and must fail before any command code exists.**
+
+Create an xUnit test class in the appropriate test project. Write tests that cover the command's expected behavior. These tests **will not compile yet** — that is correct. You are defining the contract the implementation must satisfy.
+
+Write tests for each of these scenarios:
+
+1. **Happy-path execution** — command runs with valid parameters and produces expected output.
+2. **Missing/invalid parameters** — command handles gracefully (default values, empty output, or `Failure`).
+3. **Piped input** — command processes piped chunks correctly.
+4. **Error propagation** — when `pipedChunk.IsSuccess` is `false`, the command propagates the error.
+5. **Flags and named parameters** — each parameter type parses correctly.
+6. **Edge cases** — empty strings, null-like inputs, boundary values specific to this command.
+
+Use the framework's test pattern:
+
+```csharp
+using Xunit;
+using Xcaciv.Command;
+
+public class MyCommandTests
+{
+    [Fact]
+    public async Task MyCommand_WithValidInput_ReturnsExpectedOutput()
+    {
+        var controller = new CommandController();
+        controller.AddPackageDirectory("path/to/package/bin/Debug/net10.0");
+        controller.LoadCommands();
+
+        var io = new MemoryIoContext();
+        var env = new ControllerEnvironmentContext();
+
+        await controller.Run("MYCOMMAND hello", io, env);
+
+        Assert.Contains("hello", io.ToString());
+    }
+
+    [Fact]
+    public async Task MyCommand_WithNoParams_ReturnsEmptyOrDefault()
+    {
+        // ...assert default/empty behavior
+    }
+
+    [Fact]
+    public async Task MyCommand_WithPipedInput_TransformsCorrectly()
+    {
+        // ...pipe through another command and assert
+    }
+
+    [Fact]
+    public async Task MyCommand_WithUpstreamFailure_PropagatesError()
+    {
+        // ...assert the error is not swallowed
+    }
+}
+```
+
+**Confirm the tests fail** (compilation errors or assertion failures). This is the 🔴 Red state — it proves the tests are actually checking something.
+
+### Step 4 — 🟢 GREEN: Create the minimal command implementation
+
+Write just enough code to make the failing tests pass. Do not add behavior that no test exercises yet.
+
+1. **Location**: Place the `.cs` file in the appropriate project's directory (e.g. `Commands/` or the project root for a small package).
+2. **Namespace**: Match the project's namespace convention.
+3. **Required usings** (for `AbstractCommand`-based commands):
+   ```csharp
+   using System.Collections.Generic;
+   using Xcaciv.Command.Core;
+   using Xcaciv.Command.Interface;
+   using Xcaciv.Command.Interface.Attributes;
+   using Xcaciv.Command.Interface.Parameters;
+   ```
+4. **Class declaration**: Inherit from `AbstractCommand`. Use `internal` when the command is in the main solution, `public` when it is in a standalone package.
+5. **Attributes**: Apply in this order on the class:
+   - `[CommandRoot("rootname", "description")]` — only if this is a sub-command
+   - `[CommandRegister("NAME", "description", Prototype = "...")]` — **required**
+   - `[CommandParameterOrdered(...)]` — one per positional parameter, in order
+   - `[CommandParameterNamed(...)]` — one per named parameter
+   - `[CommandFlag(...)]` — one per boolean flag
+   - `[CommandParameterSuffix(...)]` — at most one, captures remaining args
+   - `[CommandHelpRemarks("...")]` — zero or more, for additional help text
+
+6. **Implement the two required methods** — every `AbstractCommand` subclass must override both. Use the exact signatures below.
+
+**`HandleExecution`** — called when the command runs without piped input:
+
+```csharp
+public override IResult<string> HandleExecution(
+    Dictionary<string, IParameterValue> parameters,
+    IEnvironmentContext env)
+{
+    // 1. Extract each parameter using the lowercase key:
+    var myParam = parameters.TryGetValue("myparam", out var p) && p.IsValid
+        ? p.GetValue<string>()
+        : "default";
+
+    // 2. Execute command logic.
+
+    // 3. Return success or failure:
+    return CommandResult<string>.Success(result, this.OutputFormat);
+    // or: return CommandResult<string>.Failure("error message");
+}
+```
+
+**`HandlePipedChunk`** — called once per chunk when the command receives piped input:
+
+```csharp
+public override IResult<string> HandlePipedChunk(
+    IResult<string> pipedChunk,
+    Dictionary<string, IParameterValue> parameters,
+    IEnvironmentContext env)
+{
+    // 1. Always check for upstream failure first:
+    if (!pipedChunk.IsSuccess)
+    {
+        return pipedChunk; // propagate the error
+    }
+
+    // 2. Extract the input string safely:
+    var input = pipedChunk.Output ?? string.Empty;
+
+    // 3. Process and return:
+    return CommandResult<string>.Success(processedInput, this.OutputFormat);
+}
+```
+
+7. **Run the tests. Every test must pass.** This is the 🟢 Green state. If any test fails, fix the implementation — not the test — unless the test itself has a bug.
+
+### Step 5 — 🔵 REFACTOR: Clean up while tests stay green
+
+With all tests passing, improve the implementation without changing behavior:
+
+- Extract helper methods or shared logic.
+- Simplify conditional expressions.
+- Improve naming for clarity.
+- Add optional overrides only when the requirements call for them:
+
+| Override | When to use |
+|----------|------------|
+| `OnStartPipe(...)` | Initialize state before piped chunks arrive (e.g. reset an accumulator). |
+| `OnEndPipe(...)` | Finalize state after the last piped chunk (e.g. flush a buffer). |
+| `DisposeAsync()` | Release unmanaged or disposable resources. Call `base.DisposeAsync()`. |
+| Constructor setting `OutputFormat` | When the command produces structured output other than `ResultFormat.General`. |
+
+**Run the tests again after every refactor change. If any test breaks, undo the last change and try a different approach.**
+
+### Step 6 — Add coverage for newly discovered behavior
+
+If refactoring revealed new edge cases or behaviors worth asserting, cycle back: write a new failing test (🔴), make it pass (🟢), then refactor if needed (🔵). Repeat until the command is solid.
+
+### Step 7 — Verify the build
+
+1. Confirm the project compiles without errors.
+2. Run all tests one final time and confirm they pass.
+3. If creating a NuGet package, verify `dotnet pack` succeeds in Release mode.
+
+## Critical Rules (do not violate)
+
+- **Always use `pipedChunk.Output ?? string.Empty`** — never access `.Output` directly without null-coalescing.
+- **Always check `pipedChunk.IsSuccess`** at the top of `HandlePipedChunk` and propagate failures unless you have a specific reason not to.
+- **Parameter dictionary keys are case-insensitive** — the dictionary uses `StringComparer.OrdinalIgnoreCase`. Always use the lowercase form of the parameter name as the key.
+- **Never access `io.Parameters` directly** from within `HandleExecution` or `HandlePipedChunk` — `AbstractCommand.Main` processes raw parameters into the typed dictionary for you.
+- **`CommandRegisterAttribute` is required** on every command class. Without it, the command will not be discovered.
+- **One class per command** — do not put multiple `[CommandRegister]` on a single class.
+- **Return `CommandResult<string>.Success(...)` or `CommandResult<string>.Failure(...)`** — do not construct `IResult<string>` any other way.
+
+---
+
 This document provides a template and guidelines for implementing new commands in the Xcaciv.Command framework.
 
 ## Quick Reference: Parameter Attributes
