@@ -1,0 +1,31 @@
+# Normalize line endings: LF in the repository, platform-native on checkout.
+# Keeps Windows (CRLF) and WSL/Linux (LF) working trees from showing phantom modifications.
+* text=auto
+
+# Source and documentation
+*.cs      text diff=csharp
+*.csproj  text
+*.props   text
+*.targets text
+*.config  text
+*.resx    text
+*.json    text
+*.yml     text
+*.yaml    text
+*.md      text
+*.ps1     text
+
+# Visual Studio rewrites solution files with CRLF
+*.sln     text eol=crlf
+
+# Binary artifacts: never normalize or diff
+*.dll         binary
+*.exe         binary
+*.pdb         binary
+*.snk         binary
+*.nupkg       binary
+*.snupkg      binary
+*.diagsession binary
+*.png         binary
+*.jpg         binary
+*.ico         binary
