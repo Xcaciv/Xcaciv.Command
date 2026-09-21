@@ -24,7 +24,7 @@ Commands are .NET class libraries that contain implementations of the `Xc.Comman
 ## Getting Started
 
 - Read the quickstart in [docs/learn/quickstart.md](docs/learn/quickstart.md) for a five-minute walkthrough.
-- When building a new command, follow the TDD workflow below and use [COMMAND_TEMPLATE.md](COMMAND_TEMPLATE.md) as the detailed implementation instructionss.
+- When building a new command, follow the TDD workflow below and use [COMMAND_TEMPLATE.md](COMMAND_TEMPLATE.md) as the detailed implementation instructions.
 
 ## Using the Command Template
 
@@ -35,28 +35,28 @@ The template begins with **agent instructions** — a structured, step-by-step w
 **Using an AI agent?** Point the agent at `COMMAND_TEMPLATE.md` and tell it to read it and follow the directions.
 
 ```code
-Read and follow the directions in https://raw.githubusercontent.com/Xcaciv/Xcaciv.Command/refs/heads/main/COMMAND_TEMPLATE.md to create a command in the root of the Foo.Consoto project.
+Read and follow the directions in https://raw.githubusercontent.com/Xcaciv/Xcaciv.Command/refs/heads/main/COMMAND_TEMPLATE.md to create a command in the root of the Foo.Contoso project.
 ```
 
 ### Recommended workflow (TDD: Red → Green → Refactor)
 
 1. **Define the command before coding.** Record the command name, purpose, prototype, parameters, allowed values, piped-input behavior, environment changes, output format, error behavior, security constraints, and example invocations. Use this as the command's small PRD.
 2. **Choose the implementation model.** Start with `AbstractCommand`. It supplies the normal parameter processing, help generation, pipeline hooks, result formatting, and disposal behavior. Implement `ICommandDelegate` directly only for a deliberate custom or legacy execution model; it requires more framework integration and support code.
-3. **Create a self-contained class library.** The new project should contain the command source, package metadata, a README, and its tests. Use project references while developing against a local checkout, or package references when the command repository is independent.
-4. **🔴 Write failing tests first.** Define the command's expected behavior as xUnit tests _before_ writing any implementation. Cover happy-path execution, missing/invalid parameters, piped input, error propagation, and flags. Confirm the tests do not pass — compilation errors or assertion failures are expected at this stage.
-5. **🟢 Implement just enough to pass.** Create the command class, add `CommandRegisterAttribute` and parameter attributes, and implement `HandleExecution` and `HandlePipedChunk` with the minimum logic needed to make every test green. Do not add behavior that no test exercises yet.
-6. **🔵 Refactor while tests stay green.** Extract helpers, simplify conditionals, improve naming, and add optional overrides (`OnStartPipe`, `OnEndPipe`, `DisposeAsync`) as needed. Re-run the tests after every change. If a test breaks, undo and try a different approach.
-7. **Test the real plugin path.** Add at least one end-to-end test that loads the compiled package output via `AddPackageDirectory()` and `LoadCommands()`. Verify help generation, parameter validation, and pipeline discovery.
+3. **Create a self-contained class library and a sibling test project.** The command project should contain the command source, package metadata, and a README. Keep its tests in a separate project beside it, not nested beneath it: an SDK-style project compiles every `.cs` file under its own directory (see the template's suggested structure). Use project references while developing against a local checkout, or package references when the command repository is independent.
+4. **Red: write failing tests first.** Define the command's expected behavior as xUnit tests _before_ writing any implementation. Cover happy-path execution, missing/invalid parameters, piped input, error propagation, and flags. Confirm the tests do not pass — compilation errors or assertion failures are expected at this stage.
+5. **Green: implement just enough to pass.** Create the command class, add `CommandRegisterAttribute` and parameter attributes, and implement `HandleExecution` and `HandlePipedChunk` with the minimum logic needed to make every test green. Do not add behavior that no test exercises yet.
+6. **Refactor: clean up while tests stay green.** Extract helpers, simplify conditionals, improve naming, and add optional overrides (`OnStartPipe`, `OnEndPipe`, `DisposeAsync`) as needed. Re-run the tests after every change. If a test breaks, undo and try a different approach.
+7. **Test the real plugin path.** Add at least one end-to-end test that loads the compiled package output via `AddPackageDirectory()` and `LoadCommands(string.Empty)`, using a controller whose restricted directory contains that output (see the test sample in the template). Verify help generation, parameter validation, and pipeline discovery.
 8. **Pack and sign the release.** Build in Release mode, generate the `.nupkg` and `.snupkg`, sign the assembly with a strong-name key, sign the NuGet package with the organization's certificate, and verify the resulting package before publishing.
 
 ### Minimal independent project references
 
-When the command repository consumes published framework packages, use package references similar to these. Pin versions consistently with the framework version being targeted:
+When the command repository consumes published framework packages, use package references similar to these. Pin versions consistently with the framework version being targeted. The packages are published to the GitHub Packages feed `https://nuget.pkg.github.com/xcaciv/index.json` rather than nuget.org, so add that source to the repository's `NuGet.config`:
 
 ```xml
 <ItemGroup>
-	<PackageReference Include="Xcaciv.Command.Core" Version="3.3.0" />
-	<PackageReference Include="Xcaciv.Command.Interface" Version="3.3.0" />
+	<PackageReference Include="Xcaciv.Command.Core" Version="3.3.5" />
+	<PackageReference Include="Xcaciv.Command.Interface" Version="3.3.5" />
 </ItemGroup>
 ```
 
@@ -142,7 +142,13 @@ See `SECURITY.md` for secure audit logging patterns.
 
 ## Version History
 
-### 3.3.0 (Current)
+### 3.3.5 (Current)
+
+- **Version bump:** All packages aligned to **3.3.5** (Command, Core, Interface, FileLoader, DependencyInjection, Extensions.Commandline)
+- **Documentation:** `COMMAND_TEMPLATE.md` reworked into a test-first agent workflow; its test, packaging, and signing samples were corrected and verified against the framework
+- **Repository:** Added `.gitattributes` and normalized line endings to LF
+
+### 3.3.0
 
 - **Version bump:** All packages aligned to **3.3.0** (Command, Core, Interface, FileLoader, DependencyInjection, Extensions.Commandline)
 - **Documentation refresh:** Quickstart, API references, and examples updated to use `RegisterBuiltInCommands` and the v3.2.3+ `HandlePipedChunk(IResult<string>)` signature
