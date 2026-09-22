@@ -142,8 +142,17 @@ public class CommandFactory : ICommandFactory
             // CreateInstance<T>(string) prepends "." to a name without a dot and matches on
             // FullName.EndsWith, so a command class declared without a namespace (FullName
             // "FilterCommand") is never found and is reported as ".FilterCommand".
-            var commandTypeInPackage = context.GetTypes<ICommandDelegate>()
-                .FirstOrDefault(t => string.Equals(t.FullName, fullTypeName, StringComparison.Ordinal));
+            Type? commandTypeInPackage = null;
+            try
+            {
+                commandTypeInPackage = context.GetTypes<ICommandDelegate>()
+                    .FirstOrDefault(t => string.Equals(t.FullName, fullTypeName, StringComparison.Ordinal));
+            }
+            catch (System.Reflection.ReflectionTypeLoadException)
+            {
+                // some other type in the package cannot be loaded; let the loader's own lookup
+                // report it the way it always has
+            }
 
             if (commandTypeInPackage != null)
             {
