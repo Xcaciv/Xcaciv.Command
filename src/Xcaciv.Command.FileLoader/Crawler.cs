@@ -191,10 +191,19 @@ public class Crawler : ICrawler
     {
         basePath = fileSystem.Path.GetFullPath(basePath);
         if (!this.fileSystem.Directory.Exists(basePath)) throw new DirectoryNotFoundException(basePath);
+        // The sub-directory must stay inside each package directory: Path.Combine would discard
+        // the package directory for a rooted value, and ".." would step out of it and enumerate
+        // DLLs the restricted directory never covered.
+        if (!String.IsNullOrEmpty(subDirectory) && (fileSystem.Path.IsPathRooted(subDirectory) || HasParentSegment(subDirectory)))
+            throw new ArgumentException($"Sub-directory '{subDirectory}' must be a relative path inside each package directory.", nameof(subDirectory));
 
-        string searchMask = (String.IsNullOrEmpty(subDirectory)) ? SearchPattern : fileSystem.Path.Combine("*", subDirectory, SearchPattern);
-
-        var binaryCommandCollections = this.fileSystem.Directory.GetFiles(basePath, searchMask, SearchOption.AllDirectories);
+        // A search mask such as "*\bin\*.dll" must not be passed to Directory.GetFiles: a real
+        // file system treats everything before the last separator as a literal directory name
+        // and throws DirectoryNotFoundException for "<basePath>\*". Enumerate the documented
+        // layout explicitly instead: <basePath>\<Package>\<subDirectory>\*.dll
+        var binaryCommandCollections = String.IsNullOrEmpty(subDirectory)
+            ? this.fileSystem.Directory.GetFiles(basePath, SearchPattern, SearchOption.AllDirectories)
+            : GetPackageBinaryFiles(basePath, subDirectory);
 
         if (!binaryCommandCollections.Any()) throw new NoPackageDirectoryFoundException($"No packages found in {basePath}.");
 
@@ -207,6 +216,39 @@ public class Crawler : ICrawler
         {
             ForEachDirectory(basePath, subDirectory, packageAction, binaryCommandCollections);
         }
+    }
+    private bool HasParentSegment(string relativePath)
+    {
+        var separators = new[] { fileSystem.Path.DirectorySeparatorChar, fileSystem.Path.AltDirectorySeparatorChar };
+        return relativePath.Split(separators).Any(segment => segment == "..");
+    }
+    /// <summary>
+    /// enumerate the binaries of every package that follows the documented layout
+    /// &lt;basePath&gt;/&lt;Package&gt;/&lt;subDirectory&gt;/*.dll
+    /// </summary>
+    /// <param name="basePath">resolved, existing base directory</param>
+    /// <param name="subDirectory">directory expected under each package directory</param>
+    private string[] GetPackageBinaryFiles(string basePath, string subDirectory)
+    {
+        var results = new List<string>();
+
+        foreach (var packageDirectory in this.fileSystem.Directory.GetDirectories(basePath))
+        {
+            var binaryDirectory = this.fileSystem.Path.Combine(packageDirectory, subDirectory);
+            if (!this.fileSystem.Directory.Exists(binaryDirectory)) continue;
+
+            try
+            {
+                results.AddRange(this.fileSystem.Directory.GetFiles(binaryDirectory, SearchPattern, SearchOption.AllDirectories));
+            }
+            catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
+            {
+                // one unreadable package must not hide the others, matching how LoadPackageDescriptions treats a bad package
+                Trace.WriteLine($"[Xcaciv.Loader] Skipping package directory [{binaryDirectory}]: {ex.GetType().Name}: {ex.Message}");
+            }
+        }
+
+        return results.ToArray();
     }
     /// <summary>
     /// liniar direcory processing using supplied action

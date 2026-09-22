@@ -223,5 +223,72 @@ namespace Xcaciv.Command.Tests
             Assert.True(parameterLookup.ContainsKey("trailing"));
             Assert.Equal("defaultValue", parameterLookup["trailing"].RawValue);
         }
+
+        /// <summary>
+        /// Test: a named parameter must match the whole token. The name "mode" used to match
+        /// "-modern" by prefix and steal the following token as its value.
+        /// </summary>
+        [Fact]
+        public void ProcessNamedParameters_UnrelatedTokenWithNameAsPrefix_ShouldNotMatch()
+        {
+            // Arrange
+            var parameterList = new List<string> { "-modern", "value1" };
+            var parameterLookup = new Dictionary<string, IParameterValue>(StringComparer.OrdinalIgnoreCase);
+            var modeParam = new CommandParameterNamedAttribute("mode", "Mode parameter") { IsRequired = false };
+            var parameters = new[] { modeParam };
+
+            // Act
+            _commandParameters.ProcessNamedParameters(parameterList, parameterLookup, parameters);
+
+            // Assert
+            Assert.Equal(new[] { "-modern", "value1" }, parameterList);
+            Assert.True(parameterLookup.ContainsKey("mode"));
+            Assert.Equal(string.Empty, parameterLookup["mode"].RawValue);
+        }
+
+        /// <summary>
+        /// Test: a named parameter given as the last token has no value. This used to read past
+        /// the end of the list and throw ArgumentOutOfRangeException.
+        /// </summary>
+        [Fact]
+        public void ProcessNamedParameters_MatchedTokenIsLast_ShouldThrowMissingValue()
+        {
+            // Arrange
+            var parameterList = new List<string> { "-mode" };
+            var parameterLookup = new Dictionary<string, IParameterValue>(StringComparer.OrdinalIgnoreCase);
+            var parameters = new[] { new CommandParameterNamedAttribute("mode", "Mode parameter") };
+
+            // Act & Assert
+            var ex = Assert.Throws<ArgumentException>(() =>
+                _commandParameters.ProcessNamedParameters(parameterList, parameterLookup, parameters)
+            );
+            Assert.Equal("Missing value for parameter mode", ex.Message);
+        }
+
+        /// <summary>
+        /// Test: flags are processed before named parameters, and a flag alias must match the
+        /// whole token. The alias "v" used to match "-value" and consume it before the named
+        /// parameter it belonged to was processed.
+        /// </summary>
+        [Fact]
+        public void ProcessParameters_FlagAliasPrefixOfUnrelatedToken_ShouldNotStealNamedValue()
+        {
+            // Arrange
+            var flagParam = new CommandFlagAttribute("verbose", "Verbose flag") { ShortAlias = "v" };
+            var namedParam = new CommandParameterNamedAttribute("output", "Output parameter") { IsRequired = true };
+            var rawParameters = new[] { "--output", "-value" };
+
+            // Act
+            var result = _commandParameters.ProcessParameters(
+                rawParameters,
+                Array.Empty<CommandParameterOrderedAttribute>(),
+                new[] { flagParam },
+                new[] { namedParam },
+                Array.Empty<CommandParameterSuffixAttribute>());
+
+            // Assert
+            Assert.Equal("false", result["verbose"].RawValue);
+            Assert.Equal("-value", result["output"].RawValue);
+        }
     }
 }

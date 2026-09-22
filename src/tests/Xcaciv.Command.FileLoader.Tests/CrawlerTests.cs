@@ -132,4 +132,118 @@ public class CrawlerTests
         Assert.Throws<Interface.Exceptions.NoPackageDirectoryFoundException>(() => crawler.CrawlPackagePaths(basePath, subDirectory, (name, binPath) => { }));
     }
 
+    /// <summary>
+    /// Regression: the crawler used to pass a search mask such as "*\bin\*.dll" straight to
+    /// Directory.GetFiles. A real file system treats everything before the last separator in a
+    /// search pattern as a literal directory name, so it tried to open a directory named "*" and
+    /// threw DirectoryNotFoundException. MockFileSystem accepts the mask as a glob, which is why
+    /// the other tests in this class never caught it. This test uses a real temp directory laid
+    /// out per the documented convention: &lt;base&gt;/&lt;Package&gt;/bin/&lt;Package&gt;.dll
+    /// </summary>
+    [Fact()]
+    public void CrawlPackagePaths_RealFileSystem_DocumentedLayout_FindsPackageDll()
+    {
+        var realBasePath = Path.Combine(Path.GetTempPath(), "XcacivCrawlerRealFsTest_" + Guid.NewGuid().ToString("N"));
+        var packageBinDir = Path.Combine(realBasePath, "PkgA", "bin");
+        Directory.CreateDirectory(packageBinDir);
+        var dllPath = Path.Combine(packageBinDir, "PkgA.dll");
+        // CrawlPackagePaths only enumerates and checks File.Exists; it never loads the assembly.
+        File.WriteAllBytes(dllPath, new byte[] { 0x4D, 0x5A });
+
+        try
+        {
+            var crawler = new Crawler(); // real file system
+            var paths = new Dictionary<string, string>();
+
+            crawler.CrawlPackagePaths(realBasePath, "bin", (name, binPath) => paths.Add(name, binPath));
+
+            Assert.Single(paths);
+            Assert.Equal(dllPath, paths.Values.First());
+        }
+        finally
+        {
+            if (Directory.Exists(realBasePath)) Directory.Delete(realBasePath, recursive: true);
+        }
+    }
+
+    /// <summary>
+    /// Path.Combine discards the package directory when subDirectory is rooted, which would
+    /// make every package probe the same absolute path. Reject it up front.
+    /// </summary>
+    [Fact()]
+    public void CrawlPackagePaths_RootedSubDirectory_ThrowsArgumentException()
+    {
+        var fileSystem = new MockFileSystem();
+        fileSystem.AddDirectory(basePath);
+        var crawler = new Crawler(fileSystem);
+        var rooted = fileSystem.Path.DirectorySeparatorChar + "bin";
+
+        Assert.Throws<ArgumentException>(() => crawler.CrawlPackagePaths(basePath, rooted, (name, binPath) => { }));
+    }
+
+    /// <summary>
+    /// A subDirectory with ".." segments would resolve outside the package directory and
+    /// enumerate DLLs the restricted directory never covered.
+    /// </summary>
+    [Theory]
+    [InlineData("..")]
+    [InlineData("../../outside")]
+    [InlineData("bin/../..")]
+    public void CrawlPackagePaths_SubDirectoryWithParentSegment_ThrowsArgumentException(string traversal)
+    {
+        // <root>/base/PkgA/bin/PkgA.dll and <root>/outside/Outside.dll
+        var root = Path.Combine(Path.GetTempPath(), "XcacivCrawlerRealFsTest_" + Guid.NewGuid().ToString("N"));
+        var realBasePath = Path.Combine(root, "base");
+        var packageBinDir = Path.Combine(realBasePath, "PkgA", "bin");
+        var outsideDir = Path.Combine(root, "outside");
+        Directory.CreateDirectory(packageBinDir);
+        File.WriteAllBytes(Path.Combine(packageBinDir, "PkgA.dll"), new byte[] { 0x4D, 0x5A });
+        Directory.CreateDirectory(outsideDir);
+        File.WriteAllBytes(Path.Combine(outsideDir, "Outside.dll"), new byte[] { 0x4D, 0x5A });
+
+        try
+        {
+            var crawler = new Crawler();
+            var sub = traversal.Replace('/', Path.DirectorySeparatorChar);
+
+            Assert.Throws<ArgumentException>(() => crawler.CrawlPackagePaths(realBasePath, sub, (name, binPath) => { }));
+        }
+        finally
+        {
+            if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
+        }
+    }
+
+    /// <summary>
+    /// One package whose bin tree cannot be read must not stop the other packages from being
+    /// found. Skipped on Windows, where chmod has no effect.
+    /// </summary>
+    [Fact()]
+    public void CrawlPackagePaths_RealFileSystem_UnreadablePackage_OtherPackagesStillFound()
+    {
+        if (OperatingSystem.IsWindows()) return;
+
+        var realBasePath = Path.Combine(Path.GetTempPath(), "XcacivCrawlerRealFsTest_" + Guid.NewGuid().ToString("N"));
+        var goodDll = Path.Combine(realBasePath, "PkgGood", "bin", "PkgGood.dll");
+        var lockedDir = Path.Combine(realBasePath, "PkgBad", "bin", "locked");
+        Directory.CreateDirectory(Path.GetDirectoryName(goodDll)!);
+        File.WriteAllBytes(goodDll, new byte[] { 0x4D, 0x5A });
+        Directory.CreateDirectory(lockedDir);
+        File.SetUnixFileMode(lockedDir, UnixFileMode.None);
+
+        try
+        {
+            var paths = new Dictionary<string, string>();
+
+            new Crawler().CrawlPackagePaths(realBasePath, "bin", (name, binPath) => paths.Add(name, binPath));
+
+            Assert.Equal(goodDll, Assert.Single(paths).Value);
+        }
+        finally
+        {
+            File.SetUnixFileMode(lockedDir, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+            if (Directory.Exists(realBasePath)) Directory.Delete(realBasePath, recursive: true);
+        }
+    }
+
 }
