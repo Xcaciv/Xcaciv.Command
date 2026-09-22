@@ -132,4 +132,38 @@ public class CrawlerTests
         Assert.Throws<Interface.Exceptions.NoPackageDirectoryFoundException>(() => crawler.CrawlPackagePaths(basePath, subDirectory, (name, binPath) => { }));
     }
 
+    /// <summary>
+    /// Regression: the crawler used to pass a search mask such as "*\bin\*.dll" straight to
+    /// Directory.GetFiles. A real file system treats everything before the last separator in a
+    /// search pattern as a literal directory name, so it tried to open a directory named "*" and
+    /// threw DirectoryNotFoundException. MockFileSystem accepts the mask as a glob, which is why
+    /// the other tests in this class never caught it. This test uses a real temp directory laid
+    /// out per the documented convention: &lt;base&gt;/&lt;Package&gt;/bin/&lt;Package&gt;.dll
+    /// </summary>
+    [Fact()]
+    public void CrawlPackagePaths_RealFileSystem_DocumentedLayout_FindsPackageDll()
+    {
+        var realBasePath = Path.Combine(Path.GetTempPath(), "XcacivCrawlerRealFsTest_" + Guid.NewGuid().ToString("N"));
+        var packageBinDir = Path.Combine(realBasePath, "PkgA", "bin");
+        Directory.CreateDirectory(packageBinDir);
+        var dllPath = Path.Combine(packageBinDir, "PkgA.dll");
+        // CrawlPackagePaths only enumerates and checks File.Exists; it never loads the assembly.
+        File.WriteAllBytes(dllPath, new byte[] { 0x4D, 0x5A });
+
+        try
+        {
+            var crawler = new Crawler(); // real file system
+            var paths = new Dictionary<string, string>();
+
+            crawler.CrawlPackagePaths(realBasePath, "bin", (name, binPath) => paths.Add(name, binPath));
+
+            Assert.Single(paths);
+            Assert.Equal(dllPath, paths.Values.First());
+        }
+        finally
+        {
+            if (Directory.Exists(realBasePath)) Directory.Delete(realBasePath, recursive: true);
+        }
+    }
+
 }
