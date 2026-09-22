@@ -54,6 +54,7 @@ namespace Xcaciv.Command.Tests
 
             Assert.Contains(filePath, ex.Message);
             Assert.Contains("not a directory", ex.Message);
+            Assert.DoesNotContain("does not exist", ex.Message);
         }
 
         [Fact]

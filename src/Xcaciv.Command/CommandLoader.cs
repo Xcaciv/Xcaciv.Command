@@ -43,8 +43,14 @@ public class CommandLoader : ICommandLoader
                 $"Package directory '{directory}' was not added because it is outside the restricted directory '{restriction}'.");
         }
 
+        if (_verifiedDirectories.VerifyFile(directory))
+        {
+            throw new NoPackageDirectoryFoundException(
+                $"Package directory '{directory}' was not added because it is a file, not a directory.");
+        }
+
         throw new NoPackageDirectoryFoundException(
-            $"Package directory '{directory}' was not added because it does not exist or is not a directory.");
+            $"Package directory '{directory}' was not added because it does not exist.");
     }
 
     public void SetRestrictedDirectory(string restrictedDirectory)
