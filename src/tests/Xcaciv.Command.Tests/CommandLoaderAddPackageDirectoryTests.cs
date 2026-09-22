@@ -54,6 +54,41 @@ namespace Xcaciv.Command.Tests
             Assert.Contains(_restrictedDir, ex.Message);
         }
 
+        /// <summary>
+        /// docs/learn/getting-started-controller.md restricts the controller to a directory and
+        /// then adds that same directory as the package directory. The restricted-path check
+        /// used to compare the parent of the path, which rejected this.
+        /// </summary>
+        [Fact]
+        public void AddPackageDirectory_RestrictedDirectoryItself_IsAdded()
+        {
+            var loader = new CommandLoader(new Crawler(), new VerifiedSourceDirectories());
+            loader.SetRestrictedDirectory(_restrictedDir);
+
+            loader.AddPackageDirectory(_restrictedDir);
+
+            Assert.Contains(_restrictedDir, loader.Directories);
+        }
+
+        [Fact]
+        public void AddPackageDirectory_SiblingOfRestrictedDirectory_IsRejected()
+        {
+            // "<restricted>2" shares the restricted directory's name as a prefix
+            var prefixSibling = _restrictedDir + "2";
+            Directory.CreateDirectory(prefixSibling);
+            try
+            {
+                var loader = new CommandLoader(new Crawler(), new VerifiedSourceDirectories());
+                loader.SetRestrictedDirectory(_restrictedDir);
+
+                Assert.Throws<NoPackageDirectoryFoundException>(() => loader.AddPackageDirectory(prefixSibling));
+            }
+            finally
+            {
+                Directory.Delete(prefixSibling, true);
+            }
+        }
+
         [Fact]
         public void AddPackageDirectory_ValidDirectory_IsAdded()
         {

@@ -100,12 +100,25 @@ public class VerifiedSourceDirectories : IVerifiedSourceDirectories
     public static bool VerifyRestrictedPath(IPath pathWrapper, string filePath, string? restrictedPath = null, bool shouldThrow = false)
     {
         if (filePath == null) throw new ArgumentNullException(nameof(filePath));
-        var fullFilePath = pathWrapper.GetDirectoryName(pathWrapper.GetFullPath(filePath));
-
         if (String.IsNullOrEmpty(restrictedPath)) restrictedPath = Directory.GetCurrentDirectory();
-        var fullRestrictedPath = pathWrapper.GetFullPath(restrictedPath);
 
-        if (String.IsNullOrEmpty(fullFilePath) || !(new Uri(fullRestrictedPath)).IsBaseOf(new Uri(fullFilePath)))
+        // Compare the path itself, not its parent, and compare as strings rather than with
+        // Uri.IsBaseOf: a Uri without a trailing separator is treated as its parent directory,
+        // which let paths beside the restricted directory pass. A path is inside the restricted
+        // directory when it is that directory or starts with it followed by a separator.
+        var fullPath = pathWrapper.TrimEndingDirectorySeparator(pathWrapper.GetFullPath(filePath));
+        var fullRestrictedPath = pathWrapper.TrimEndingDirectorySeparator(pathWrapper.GetFullPath(restrictedPath));
+        var restrictedPrefix = pathWrapper.EndsInDirectorySeparator(fullRestrictedPath)
+            ? fullRestrictedPath // a root such as "/" or "C:\" keeps its separator
+            : fullRestrictedPath + pathWrapper.DirectorySeparatorChar;
+        var comparison = OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
+
+        var isInside = String.Equals(fullPath, fullRestrictedPath, comparison)
+            || fullPath.StartsWith(restrictedPrefix, comparison);
+
+        if (!isInside)
         {
             if (shouldThrow) throw new ArgumentOutOfRangeException(nameof(filePath) + " must be located within " + nameof(restrictedPath));
             else return false;

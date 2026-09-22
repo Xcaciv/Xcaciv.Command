@@ -36,6 +36,61 @@ namespace Xcaciv.Command.Tests.FileLoader
             Assert.False(result);
         }
 
+        /// <summary>
+        /// The check used to compare the parent of the path with Uri.IsBaseOf, which treats a
+        /// restricted path without a trailing separator as its own parent. A path under a
+        /// sibling of the restricted directory therefore passed.
+        /// </summary>
+        [Theory]
+        [InlineData("/restricted/other/file.txt")]
+        [InlineData("/restricted/path2/file.txt")]
+        [InlineData("/restricted/file.txt")]
+        public void VerifyRestrictedPath_ShouldReturnFalse_WhenPathIsBesideRestrictedPath(string filePath)
+        {
+            // Arrange
+            var fileSystem = new MockFileSystem();
+            var directories = new VerifiedSourceDirectories(fileSystem);
+            directories.SetRestrictedDirectory("/restricted/path");
+
+            // Act
+            var result = directories.VerifyRestrictedPath(filePath);
+
+            // Assert
+            Assert.False(result);
+        }
+
+        [Fact]
+        public void VerifyDirectory_ShouldReturnTrue_WhenDirectoryIsTheRestrictedDirectory()
+        {
+            // Arrange
+            var fileSystem = new MockFileSystem();
+            fileSystem.AddDirectory("/restricted/path");
+            var directories = new VerifiedSourceDirectories(fileSystem);
+            directories.SetRestrictedDirectory("/restricted/path");
+
+            // Act
+            var result = directories.VerifyDirectory("/restricted/path");
+
+            // Assert
+            Assert.True(result);
+        }
+
+        [Fact]
+        public void VerifyDirectory_ShouldReturnTrue_WhenRestrictedDirectoryHasTrailingSeparator()
+        {
+            // Arrange
+            var fileSystem = new MockFileSystem();
+            fileSystem.AddDirectory("/restricted/path/directory");
+            var directories = new VerifiedSourceDirectories(fileSystem);
+            directories.SetRestrictedDirectory("/restricted/path/");
+
+            // Act
+            var result = directories.VerifyDirectory("/restricted/path/directory");
+
+            // Assert
+            Assert.True(result);
+        }
+
         [Fact]
         public void VerifyFile_ShouldReturnTrue_WhenFileExistsWithinRestrictedPath()
         {
