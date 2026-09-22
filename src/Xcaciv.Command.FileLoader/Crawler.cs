@@ -191,9 +191,11 @@ public class Crawler : ICrawler
     {
         basePath = fileSystem.Path.GetFullPath(basePath);
         if (!this.fileSystem.Directory.Exists(basePath)) throw new DirectoryNotFoundException(basePath);
-        // Path.Combine would discard the package directory for a rooted sub-directory
-        if (!String.IsNullOrEmpty(subDirectory) && fileSystem.Path.IsPathRooted(subDirectory))
-            throw new ArgumentException($"Sub-directory '{subDirectory}' must be relative to each package directory.", nameof(subDirectory));
+        // The sub-directory must stay inside each package directory: Path.Combine would discard
+        // the package directory for a rooted value, and ".." would step out of it and enumerate
+        // DLLs the restricted directory never covered.
+        if (!String.IsNullOrEmpty(subDirectory) && (fileSystem.Path.IsPathRooted(subDirectory) || HasParentSegment(subDirectory)))
+            throw new ArgumentException($"Sub-directory '{subDirectory}' must be a relative path inside each package directory.", nameof(subDirectory));
 
         // A search mask such as "*\bin\*.dll" must not be passed to Directory.GetFiles: a real
         // file system treats everything before the last separator as a literal directory name
@@ -214,6 +216,11 @@ public class Crawler : ICrawler
         {
             ForEachDirectory(basePath, subDirectory, packageAction, binaryCommandCollections);
         }
+    }
+    private bool HasParentSegment(string relativePath)
+    {
+        var separators = new[] { fileSystem.Path.DirectorySeparatorChar, fileSystem.Path.AltDirectorySeparatorChar };
+        return relativePath.Split(separators).Any(segment => segment == "..");
     }
     /// <summary>
     /// enumerate the binaries of every package that follows the documented layout

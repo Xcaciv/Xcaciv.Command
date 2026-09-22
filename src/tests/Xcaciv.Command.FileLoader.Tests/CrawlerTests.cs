@@ -182,6 +182,39 @@ public class CrawlerTests
     }
 
     /// <summary>
+    /// A subDirectory with ".." segments would resolve outside the package directory and
+    /// enumerate DLLs the restricted directory never covered.
+    /// </summary>
+    [Theory]
+    [InlineData("..")]
+    [InlineData("../../outside")]
+    [InlineData("bin/../..")]
+    public void CrawlPackagePaths_SubDirectoryWithParentSegment_ThrowsArgumentException(string traversal)
+    {
+        // <root>/base/PkgA/bin/PkgA.dll and <root>/outside/Outside.dll
+        var root = Path.Combine(Path.GetTempPath(), "XcacivCrawlerRealFsTest_" + Guid.NewGuid().ToString("N"));
+        var realBasePath = Path.Combine(root, "base");
+        var packageBinDir = Path.Combine(realBasePath, "PkgA", "bin");
+        var outsideDir = Path.Combine(root, "outside");
+        Directory.CreateDirectory(packageBinDir);
+        File.WriteAllBytes(Path.Combine(packageBinDir, "PkgA.dll"), new byte[] { 0x4D, 0x5A });
+        Directory.CreateDirectory(outsideDir);
+        File.WriteAllBytes(Path.Combine(outsideDir, "Outside.dll"), new byte[] { 0x4D, 0x5A });
+
+        try
+        {
+            var crawler = new Crawler();
+            var sub = traversal.Replace('/', Path.DirectorySeparatorChar);
+
+            Assert.Throws<ArgumentException>(() => crawler.CrawlPackagePaths(realBasePath, sub, (name, binPath) => { }));
+        }
+        finally
+        {
+            if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
+        }
+    }
+
+    /// <summary>
     /// One package whose bin tree cannot be read must not stop the other packages from being
     /// found. Skipped on Windows, where chmod has no effect.
     /// </summary>
