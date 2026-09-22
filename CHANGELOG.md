@@ -5,6 +5,20 @@ All notable changes to Xcaciv.Command will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.6] - 2026-09-22
+
+### Changed
+
+- **Breaking:** `AddPackageDirectory` now throws `NoPackageDirectoryFoundException` when the directory does not exist, is not a directory, or lies outside the restricted directory. It used to drop the directory silently, and the failure only surfaced later as a misleading `NoPluginsFoundException("No base package directory configured")` from `LoadCommands`. Callers that add several directories no longer get best-effort loading of the valid ones when one is invalid.
+- **Version bump:** All packages aligned to **3.3.6**.
+
+### Fixed
+
+- **Security:** the restricted-path check accepted paths beside the restricted directory (with a restriction of `/opt/plugins`, `/opt/other/plugins` and `/opt/plugins2/x` passed). It also rejected the restricted directory itself and every child when the restriction ended in a separator.
+- `LoadCommands()` with its default `"bin"` sub-directory threw `DirectoryNotFoundException` on a real file system; the crawler now enumerates `<base>/<Package>/bin/*.dll` explicitly. One unreadable package directory no longer hides the others, and a rooted sub-directory is rejected.
+- Named parameters and flags now match the whole token: `-mode` no longer matches `-modern`, and a flag aliased `v` no longer consumes `-value`. A named parameter given as the last token reports `Missing value for parameter X` instead of throwing `ArgumentOutOfRangeException`.
+- Plugin command classes declared without a namespace failed to load (`Type '.FilterCommand' was not found`, an Xcaciv.Loader 2.1.2 behavior); `CommandFactory` now resolves the type from the loaded package directly.
+
 ## [3.3.0] - 2026-01-11
 
 ### Changed
