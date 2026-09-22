@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Xcaciv.Command.FileLoader;
 using Xcaciv.Command.Interface;
@@ -26,7 +27,24 @@ public class CommandLoader : ICommandLoader
     public void AddPackageDirectory(string directory)
     {
         if (string.IsNullOrWhiteSpace(directory)) throw new ArgumentException("Directory is required", nameof(directory));
-        _verifiedDirectories.AddDirectory(directory);
+
+        if (_verifiedDirectories.AddDirectory(directory)) return;
+
+        // AddDirectory only says that it refused. Work out which check failed so the caller
+        // gets the reason now, instead of a misleading "No base package directory configured"
+        // from LoadCommands later.
+        if (!_verifiedDirectories.VerifyRestrictedPath(directory))
+        {
+            var restriction = string.IsNullOrEmpty(_verifiedDirectories.RestrictedDirectory)
+                ? Directory.GetCurrentDirectory()
+                : _verifiedDirectories.RestrictedDirectory;
+
+            throw new NoPackageDirectoryFoundException(
+                $"Package directory '{directory}' was not added because it is outside the restricted directory '{restriction}'.");
+        }
+
+        throw new NoPackageDirectoryFoundException(
+            $"Package directory '{directory}' was not added because it does not exist.");
     }
 
     public void SetRestrictedDirectory(string restrictedDirectory)
