@@ -137,9 +137,11 @@ public class CommandParameters
         foreach (var parameter in commandFlagAttributes ?? Array.Empty<CommandFlagAttribute>())
         {
             var index = 0;
-            Regex fullName = new Regex("-{1,2}" + parameter.Name, RegexOptions.IgnoreCase);
+            // Anchor and escape so "-mode" does not match "-modern" (or a token that merely
+            // contains the name), and so a name with regex metacharacters cannot break matching.
+            Regex fullName = new Regex("^-{1,2}" + Regex.Escape(parameter.Name) + "$", RegexOptions.IgnoreCase);
             Regex abbrName = string.IsNullOrEmpty(parameter.ShortAlias) ? new Regex("^$") :
-                new Regex("-{1,2}" + parameter.ShortAlias, RegexOptions.IgnoreCase);
+                new Regex("^-{1,2}" + Regex.Escape(parameter.ShortAlias) + "$", RegexOptions.IgnoreCase);
 
             var found = false;
 
@@ -170,9 +172,11 @@ public class CommandParameters
         foreach (var parameter in commandParametersNamed ?? Array.Empty<CommandParameterNamedAttribute>())
         {
             var index = 0;
-            Regex fullName = new Regex("-{1,2}" + parameter.Name, RegexOptions.IgnoreCase);
+            // Anchor and escape so "-mode" does not match "-modern" (or a token that merely
+            // contains the name), and so a name with regex metacharacters cannot break matching.
+            Regex fullName = new Regex("^-{1,2}" + Regex.Escape(parameter.Name) + "$", RegexOptions.IgnoreCase);
             Regex abbrName = string.IsNullOrEmpty(parameter.ShortAlias) ? new Regex("^$") :
-                new Regex("-{1,2}" + parameter.ShortAlias, RegexOptions.IgnoreCase);
+                new Regex("^-{1,2}" + Regex.Escape(parameter.ShortAlias) + "$", RegexOptions.IgnoreCase);
 
             var found = false;
             var foundValue = string.Empty;
@@ -182,6 +186,10 @@ public class CommandParameters
                 if (value.StartsWith("-") && (fullName.IsMatch(value) || abbrName.IsMatch(value)))
                 {
                     var valueIndex = index + 1;
+                    if (valueIndex >= parameterList.Count)
+                    {
+                        throw new ArgumentException($"Missing value for parameter {parameter.Name}");
+                    }
                     foundValue = parameterList[valueIndex];
                     parameterList.RemoveAt(valueIndex);
                     parameterList.RemoveAt(index);
