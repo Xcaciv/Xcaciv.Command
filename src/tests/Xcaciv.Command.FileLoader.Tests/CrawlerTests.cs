@@ -166,4 +166,51 @@ public class CrawlerTests
         }
     }
 
+    /// <summary>
+    /// Path.Combine discards the package directory when subDirectory is rooted, which would
+    /// make every package probe the same absolute path. Reject it up front.
+    /// </summary>
+    [Fact()]
+    public void CrawlPackagePaths_RootedSubDirectory_ThrowsArgumentException()
+    {
+        var fileSystem = new MockFileSystem();
+        fileSystem.AddDirectory(basePath);
+        var crawler = new Crawler(fileSystem);
+        var rooted = fileSystem.Path.DirectorySeparatorChar + "bin";
+
+        Assert.Throws<ArgumentException>(() => crawler.CrawlPackagePaths(basePath, rooted, (name, binPath) => { }));
+    }
+
+    /// <summary>
+    /// One package whose bin tree cannot be read must not stop the other packages from being
+    /// found. Skipped on Windows, where chmod has no effect.
+    /// </summary>
+    [Fact()]
+    public void CrawlPackagePaths_RealFileSystem_UnreadablePackage_OtherPackagesStillFound()
+    {
+        if (OperatingSystem.IsWindows()) return;
+
+        var realBasePath = Path.Combine(Path.GetTempPath(), "XcacivCrawlerRealFsTest_" + Guid.NewGuid().ToString("N"));
+        var goodDll = Path.Combine(realBasePath, "PkgGood", "bin", "PkgGood.dll");
+        var lockedDir = Path.Combine(realBasePath, "PkgBad", "bin", "locked");
+        Directory.CreateDirectory(Path.GetDirectoryName(goodDll)!);
+        File.WriteAllBytes(goodDll, new byte[] { 0x4D, 0x5A });
+        Directory.CreateDirectory(lockedDir);
+        File.SetUnixFileMode(lockedDir, UnixFileMode.None);
+
+        try
+        {
+            var paths = new Dictionary<string, string>();
+
+            new Crawler().CrawlPackagePaths(realBasePath, "bin", (name, binPath) => paths.Add(name, binPath));
+
+            Assert.Equal(goodDll, Assert.Single(paths).Value);
+        }
+        finally
+        {
+            File.SetUnixFileMode(lockedDir, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+            if (Directory.Exists(realBasePath)) Directory.Delete(realBasePath, recursive: true);
+        }
+    }
+
 }

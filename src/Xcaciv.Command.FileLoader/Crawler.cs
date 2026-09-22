@@ -191,6 +191,9 @@ public class Crawler : ICrawler
     {
         basePath = fileSystem.Path.GetFullPath(basePath);
         if (!this.fileSystem.Directory.Exists(basePath)) throw new DirectoryNotFoundException(basePath);
+        // Path.Combine would discard the package directory for a rooted sub-directory
+        if (!String.IsNullOrEmpty(subDirectory) && fileSystem.Path.IsPathRooted(subDirectory))
+            throw new ArgumentException($"Sub-directory '{subDirectory}' must be relative to each package directory.", nameof(subDirectory));
 
         // A search mask such as "*\bin\*.dll" must not be passed to Directory.GetFiles: a real
         // file system treats everything before the last separator as a literal directory name
@@ -227,7 +230,15 @@ public class Crawler : ICrawler
             var binaryDirectory = this.fileSystem.Path.Combine(packageDirectory, subDirectory);
             if (!this.fileSystem.Directory.Exists(binaryDirectory)) continue;
 
-            results.AddRange(this.fileSystem.Directory.GetFiles(binaryDirectory, SearchPattern, SearchOption.AllDirectories));
+            try
+            {
+                results.AddRange(this.fileSystem.Directory.GetFiles(binaryDirectory, SearchPattern, SearchOption.AllDirectories));
+            }
+            catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
+            {
+                // one unreadable package must not hide the others, matching how LoadPackageDescriptions treats a bad package
+                Trace.WriteLine($"[Xcaciv.Loader] Skipping package directory [{binaryDirectory}]: {ex.GetType().Name}: {ex.Message}");
+            }
         }
 
         return results.ToArray();
