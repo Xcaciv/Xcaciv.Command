@@ -44,6 +44,19 @@ namespace Xcaciv.Command.Tests
         }
 
         [Fact]
+        public void AddPackageDirectory_PathIsAFile_ThrowsWithoutClaimingItDoesNotExist()
+        {
+            var filePath = Path.Combine(_restrictedDir, "not-a-directory.txt");
+            File.WriteAllText(filePath, "x");
+            var controller = new CommandController(new Crawler(), _restrictedDir);
+
+            var ex = Assert.Throws<NoPackageDirectoryFoundException>(() => controller.AddPackageDirectory(filePath));
+
+            Assert.Contains(filePath, ex.Message);
+            Assert.Contains("not a directory", ex.Message);
+        }
+
+        [Fact]
         public void AddPackageDirectory_DirectoryOutsideRestrictedDirectory_ThrowsNamingBoth()
         {
             var controller = new CommandController(new Crawler(), _restrictedDir);

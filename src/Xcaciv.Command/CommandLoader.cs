@@ -44,7 +44,7 @@ public class CommandLoader : ICommandLoader
         }
 
         throw new NoPackageDirectoryFoundException(
-            $"Package directory '{directory}' was not added because it does not exist.");
+            $"Package directory '{directory}' was not added because it does not exist or is not a directory.");
     }
 
     public void SetRestrictedDirectory(string restrictedDirectory)
