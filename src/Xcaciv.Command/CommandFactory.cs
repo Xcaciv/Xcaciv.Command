@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Security;
 using System.Threading.Tasks;
 using Xcaciv.Command.Interface;
@@ -136,7 +137,20 @@ public class CommandFactory : ICommandFactory
                 packagePath,
                 basePathRestriction: basePathRestriction,
                 securityPolicy: effectivePolicy);
-                
+
+            // Resolve the Type ourselves and activate it directly. Xcaciv.Loader 2.1.2's
+            // CreateInstance<T>(string) prepends "." to a name without a dot and matches on
+            // FullName.EndsWith, so a command class declared without a namespace (FullName
+            // "FilterCommand") is never found and is reported as ".FilterCommand".
+            var commandTypeInPackage = context.GetTypes<ICommandDelegate>()
+                .FirstOrDefault(t => string.Equals(t.FullName, fullTypeName, StringComparison.Ordinal));
+
+            if (commandTypeInPackage != null)
+            {
+                return context.CreateInstance<ICommandDelegate>(commandTypeInPackage);
+            }
+
+            // No exact match: keep the loader's own lookup for callers that pass a partial name.
             return context.CreateInstance<ICommandDelegate>(fullTypeName);
         }
         catch (SecurityException ex)
